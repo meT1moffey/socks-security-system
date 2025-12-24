@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socks Security System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-top">
+                <div class="logo">
+                    <i class="fas fa-socks"></i>
+                    <h1>Socks Security System</h1>
+                </div>
+                <div class="header-actions">
+                    <a href="{{ url_for('add_sock_page') }}" class="add-btn">
+                        <i class="fas fa-plus"></i> Добавить носок
+                    </a>
+                    <button class="stats-btn" id="showStatsBtn">
+                        <i class="fas fa-chart-bar"></i> Статистика
+                    </button>
+                </div>
+            </div>
+            <p class="subtitle">Умный органайзер для вашей коллекции носков</p>
+            
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="searchInput" placeholder="Поиск носков по цвету, стилю или бренду...">
+                <button id="searchBtn">Найти</button>
+            </div>
+        </header>
+
+        <div class="modal" id="statsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2><i class="fas fa-chart-bar"></i> Статистика коллекции</h2>
+                    <button class="close-modal">&times;</button>
+                </div>
+                <div class="modal-body" id="statsContent">
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <i class="fas fa-socks"></i>
+                <div>
+                    <h3>{{ stats.total }}</h3>
+                    <p>Всего носков</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <h3>{{ stats.clean }}</h3>
+                    <p>Чистые носки</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-sink"></i>
+                <div>
+                    <h3>{{ stats.dirty }}</h3>
+                    <p>Требуют стирки</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-walking"></i>
+                <div>
+                    <h3>{{ "%.1f"|format(stats.avg_wear_count or 0) }}</h3>
+                    <p>Средняя носкость</p>
+                </div>
+            </div>
+        </div>
+
+        <main class="main-content">
+            <div class="table-container">
+                <div class="table-header">
+                    <h2><i class="fas fa-list"></i> Коллекция носков <span class="badge">{{ stats.total }}</span></h2>
+                    <div class="filters">
+                        <button class="filter-btn active" data-filter="all">Все</button>
+                        <button class="filter-btn" data-filter="clean">Чистые</button>
+                        <button class="filter-btn" data-filter="dirty">Грязные</button>
+                        <button class="filter-btn" data-filter="frequent">Часто носимые</button>
+                    </div>
+                </div>
+                
+                <div id="searchResults" style="display: none;">
+                    <div class="search-results-header">
+                        <h3>Результаты поиска</h3>
+                        <button id="clearSearch" class="clear-search-btn">
+                            <i class="fas fa-times"></i> Очистить поиск
+                        </button>
+                    </div>
+                    <div class="search-results-container" id="searchResultsContainer">
+                    </div>
+                </div>
+                
+                <div class="table-responsive" id="mainTable">
+                    <table class="socks-table">
+                        <thead>
+                            <tr>
+                                <th class="photo-col">Фото</th>
+                                <th class="info-col">Информация</th>
+                                <th class="status-col">Статус</th>
+                                <th class="wear-col">Носкость</th>
+                                <th class="actions-col">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sock in socks %}
+                            <tr class="sock-row" data-id="{{ sock.id }}" data-clean="{{ 'true' if sock.clean else 'false' }}" data-wear="{{ sock.wear_count }}">
+                                <td class="photo-cell">
+                                    <div class="photo-container">
+                                        {% if sock.photo_url %}
+                                            <img src="{{ sock.photo_url }}" alt="Носок {{ sock.color }}" class="sock-photo" loading="lazy">
+                                        {% else %}
+                                            <div class="photo-placeholder" style="background-color: {{ sock.color_hex or '#6c757d' }}">
+                                                <i class="fas fa-socks"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="info-cell">
+                                    <div class="sock-info">
+                                        <h4>{{ sock.color }} носки</h4>
+                                        <div class="sock-details">
+                                            <span class="detail-item">
+                                                <i class="fas fa-tshirt"></i> {{ sock.style }}
+                                            </span>
+                                            {% if sock.pattern %}
+                                            <span class="detail-item">
+                                                <i class="fas fa-shapes"></i> {{ sock.pattern }}
+                                            </span>
+                                            {% endif %}
+                                            {% if sock.material %}
+                                            <span class="detail-item">
+                                                <i class="fas fa-spa"></i> {{ sock.material }}
+                                            </span>
+                                            {% endif %}
+                                            {% if sock.brand %}
+                                            <span class="detail-item">
+                                                <i class="fas fa-tag"></i> {{ sock.brand }}
+                                            </span>
+                                            {% endif %}
+                                            <span class="detail-item">
+                                                <i class="fas fa-ruler"></i> {{ sock.size }}
+                                            </span>
+                                        </div>
+                                        <div class="sock-meta">
+                                            <small>Добавлено: {{ sock.created_at_formatted }}</small>
+                                            {% if sock.last_washed_formatted %}
+                                            <small>Стирка: {{ sock.last_washed_formatted }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="status-cell">
+                                    <div class="clean-status {% if sock.clean %}clean{% else %}dirty{% endif %}">
+                                        <i class="fas {% if sock.clean %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                                        <span>{% if sock.clean %}Чистые{% else %}Грязные{% endif %}</span>
+                                    </div>
+                                </td>
+                                <td class="wear-cell">
+                                    <div class="wear-count">
+                                        <div class="wear-progress">
+                                            <div class="wear-bar" style="width: {{ (sock.wear_count / 10 * 100) if sock.wear_count <= 10 else 100 }}%"></div>
+                                        </div>
+                                        <span class="wear-number">{{ sock.wear_count }}</span>
+                                        <small>раз</small>
+                                    </div>
+                                    <button class="btn-history" data-id="{{ sock.id }}">
+                                        <i class="fas fa-history"></i> История
+                                    </button>
+                                </td>
+                                <td class="actions-cell">
+                                    <div class="action-buttons">
+                                        <button class="action-btn toggle-clean" data-id="{{ sock.id }}">
+                                            <i class="fas {% if sock.clean %}fa-shoe-prints{% else %}fa-sink{% endif %}"></i>
+                                            {{ 'Испачкать' if sock.clean else 'Постирать' }}
+                                        </button>
+                                        <button class="action-btn btn-delete" data-id="{{ sock.id }}">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mobile-view">
+                {% for sock in socks %}
+                <div class="sock-card" data-id="{{ sock.id }}" data-clean="{{ 'true' if sock.clean else 'false' }}">
+                    <div class="card-header">
+                        <div class="card-photo">
+                            {% if sock.photo_url %}
+                                <img src="{{ sock.photo_url }}" alt="Носок {{ sock.color }}" loading="lazy">
+                            {% else %}
+                                <div class="photo-placeholder" style="background-color: {{ sock.color_hex or '#6c757d' }}">
+                                    <i class="fas fa-socks"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-info">
+                            <h3>{{ sock.color }} носки</h3>
+                            <p class="card-style">{{ sock.style }}</p>
+                            <div class="card-meta">
+                                <span>{{ sock.size }}</span>
+                                {% if sock.brand %}<span>{{ sock.brand }}</span>{% endif %}
+                            </div>
+                        </div>
+                        <div class="card-status">
+                            <div class="clean-status {% if sock.clean %}clean{% else %}dirty{% endif %}">
+                                <i class="fas {% if sock.clean %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        {% if sock.pattern %}
+                        <div class="detail-item">
+                            <span class="detail-label">Узор:</span>
+                            <span>{{ sock.pattern }}</span>
+                        </div>
+                        {% endif %}
+                        {% if sock.material %}
+                        <div class="detail-item">
+                            <span class="detail-label">Материал:</span>
+                            <span>{{ sock.material }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="detail-item">
+                            <span class="detail-label">Носкость:</span>
+                            <div class="wear-count-mobile">
+                                <span>{{ sock.wear_count }} раз</span>
+                                <div class="wear-progress-small">
+                                    <div class="wear-bar" style="width: {{ (sock.wear_count / 10 * 100) if sock.wear_count <= 10 else 100 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button class="action-btn toggle-clean" data-id="{{ sock.id }}">
+                            <i class="fas {% if sock.clean %}fa-broom{% else %}fa-washing-machine{% endif %}"></i>
+                            {{ 'Испачкать' if sock.clean else 'Постирать' }}
+                        </button>
+                        <button class="action-btn btn-delete-mobile" data-id="{{ sock.id }}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2025 Органайзер носков. Все права защищены.</p>
+        </footer>
+    </div>
+
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-history"></i> История стирок</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="historyContent">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="confirmModal">
+        <div class="modal-content confirm-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Подтверждение удаления</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Вы уверены, что хотите удалить этот носок? Это действие нельзя отменить.</p>
+                <div class="confirm-actions">
+                    <button class="btn-secondary" id="cancelDelete">Отмена</button>
+                    <button class="btn-danger" id="confirmDelete">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

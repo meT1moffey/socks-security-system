@@ -1,0 +1,22 @@
+{
+  "name": "socks-organizer",
+  "version": "1.0.0",
+  "description": "Органайзер для коллекции носков",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "dev": "concurrently \"npm run build:watch\" \"python app.py\"",
+    "clean": "rm -rf static/js/*.js static/js/*.js.map",
+    "build:clean": "npm run clean && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  }
+}

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Добавить носок - Socks Security System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='add_sock.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-socks"></i>
+                <h1>Добавить носок</h1>
+            </div>
+            <p class="subtitle">Добавьте новый носок в вашу коллекцию</p>
+        </header>
+
+        <nav class="breadcrumb">
+            <a href="{{ url_for('index') }}"><i class="fas fa-home"></i> Главная</a>
+            <i class="fas fa-chevron-right"></i>
+            <span>Добавить носок</span>
+        </nav>
+
+        <main class="main-content">
+            <div class="form-container">
+                <div class="form-header">
+                    <h2><i class="fas fa-plus-circle"></i> Информация о носке</h2>
+                    <p>Заполните форму, чтобы добавить новый носок в коллекцию</p>
+                </div>
+
+                <form id="addSockForm" class="sock-form" enctype="multipart/form-data">
+                    <div class="form-section">
+                        <h3><i class="fas fa-palette"></i> Внешний вид</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="color">
+                                    <i class="fas fa-fill-drip"></i> Цвет
+                                </label>
+                                <div class="color-selector">
+                                    {% for color in color_options %}
+                                    <div class="color-option" 
+                                         data-name="{{ color.name }}" 
+                                         data-hex="{{ color.hex }}"
+                                         style="background-color: {{ color.hex }}"
+                                         title="{{ color.name }}">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <input type="hidden" id="color" name="color" required>
+                                <input type="hidden" id="color_hex" name="color_hex">
+                                <div class="selected-color-display">
+                                    <span id="selectedColorName">Выберите цвет</span>
+                                    <div id="selectedColorPreview"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="style">
+                                    <i class="fas fa-tshirt"></i> Стиль
+                                </label>
+                                <select id="style" name="style" required>
+                                    <option value="">Выберите стиль</option>
+                                    {% for style in style_options %}
+                                    <option value="{{ style }}">{{ style }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="pattern">
+                                    <i class="fas fa-shapes"></i> Узор
+                                </label>
+                                <select id="pattern" name="pattern" required>
+                                    <option value="">Выберите узор</option>
+                                    {% for pattern in pattern_options %}
+                                    <option value="{{ pattern }}">{{ pattern }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-cogs"></i> Характеристики</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="material">
+                                    <i class="fas fa-spa"></i> Материал
+                                </label>
+                                <select id="material" name="material" required>
+                                    <option value="">Выберите материал</option>
+                                    {% for material in material_options %}
+                                    <option value="{{ material }}">{{ material }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="size">
+                                    <i class="fas fa-ruler"></i> Размер
+                                </label>
+                                <select id="size" name="size" required>
+                                    <option value="">Выберите размер</option>
+                                    {% for size in size_options %}
+                                    <option value="{{ size }}">{{ size }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="brand">
+                                    <i class="fas fa-tag"></i> Бренд
+                                </label>
+                                <select id="brand" name="brand">
+                                    <option value="">Выберите бренд</option>
+                                    {% for brand in brand_options %}
+                                    <option value="{{ brand }}">{{ brand }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="notes">
+                                    <i class="fas fa-sticky-note"></i> Заметки
+                                </label>
+                                <textarea id="notes" name="notes" rows="3" 
+                                          placeholder="Дополнительная информация о носке..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3><i class="fas fa-camera"></i> Фотография</h3>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="photo">
+                                    <i class="fas fa-camera"></i> Фотография носка
+                                </label>
+                                <input type="file" id="photo" name="photo" accept="image/*" class="file-input">
+                                <small class="form-hint">Можно загрузить фото с компьютера (PNG, JPG, GIF, до 16MB)</small>
+                                
+                                <div class="file-preview" id="filePreview">
+                                    <div class="preview-placeholder">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                        <p>Выберите файл для предпросмотра</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="window.location.href='{{ url_for('index') }}'">
+                            <i class="fas fa-times"></i> Отмена
+                        </button>
+                        <button type="submit" class="btn-primary">
+                            <i class="fas fa-plus"></i> Добавить носок
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="form-sidebar">
+                <div class="sidebar-card">
+                    <h3><i class="fas fa-lightbulb"></i> Советы</h3>
+                    <ul class="tips-list">
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>Выбирайте точный цвет для удобной сортировки</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>Указывайте материал для правильного ухода</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>Добавляйте фото для быстрой идентификации</span>
+                        </li>
+                        <li>
+                            <i class="fas fa-check-circle"></i>
+                            <span>Новые носки автоматически отмечаются как чистые</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="sidebar-card">
+                    <h3><i class="fas fa-history"></i> Последние добавленные</h3>
+                    <div class="recent-socks">
+                        {% if recent_socks %}
+                            {% for sock in recent_socks %}
+                            <div class="recent-sock">
+                                <div class="recent-color" style="background-color: {{ sock.color_hex }}"></div>
+                                <div class="recent-info">
+                                    <strong>{{ sock.color }}</strong>
+                                    <span>{{ sock.style }}</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="no-recent">Нет недавно добавленных носков</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="notification" id="notification">
+            <i class="fas fa-check-circle"></i>
+            <span id="notificationMessage"></span>
+        </div>
+
+        <footer class="footer">
+            <p>© 2024 Органайзер носков. Все права защищены.</p>
+            <p class="footer-info">Добавление нового носка</p>
+        </footer>
+    </div>
+
+    <script type="module" src="{{ url_for('static', filename='js/addSock.js') }}"></script>
+</body>
+</html>
