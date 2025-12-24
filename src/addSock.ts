@@ -1,4 +1,4 @@
-import { addSock, isValidImageFile } from './legacy/api';
+import { addSock, isValidImageFile } from './api';
 import { NotificationManager } from './utils';
 
 class AddSockApp {
