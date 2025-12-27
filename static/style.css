@@ -790,6 +790,17 @@ body {
     transition: background-color 0.3s ease;
 }
 
+.btn-cancel {
+    padding: 10px 20px;
+    background: white;
+    color: gray;
+    border: solid 2px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
 .btn-danger:hover {
     background: #c0392b;
 }
@@ -922,7 +933,6 @@ body {
     color: #5a6268;
 }
 
-/* Поиск */
 .search-results-header {
     display: flex;
     justify-content: space-between;
@@ -1007,7 +1017,6 @@ body {
     color: #e0e6e9;
 }
 
-/* История стирок */
 .history-header {
     text-align: center;
     margin-bottom: 30px;
@@ -1062,7 +1071,6 @@ body {
     color: #e0e6e9;
 }
 
-/* Мобильная версия - обновленные стили */
 .wear-count-mobile {
     display: flex;
     align-items: center;
@@ -1089,7 +1097,6 @@ body {
     line-height: 1.4;
 }
 
-/* Адаптивность */
 @media (max-width: 992px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);

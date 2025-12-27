@@ -8,8 +8,8 @@ import uuid
 app = Flask(__name__)
 app.config['DATABASE'] = 'socks.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['MAX_CONTENT_LENGTH'] = 1 << 24
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'webp'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -142,10 +142,10 @@ def add_sock():
         db.execute('''
             INSERT INTO socks (id, color, color_hex, style, pattern, material, 
                               size, brand, photo_filename, clean, created_at, 
-                              last_washed, notes, wear_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0)
+                              last_washed, wear_count)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0)
         ''', (sock_id, color_name, color_hex, style, pattern, material, 
-              size, brand, photo_filename, current_time, current_time, notes))
+              size, brand, photo_filename, current_time, current_time))
         db.commit()
         
         # Возвращаем успех
