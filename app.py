@@ -40,7 +40,6 @@ def init_db():
             clean BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_washed TIMESTAMP,
-            notes TEXT,
             wear_count INTEGER DEFAULT 0
         )
     ''')
@@ -136,26 +135,6 @@ def add_sock():
                 file.save(file_path)
                 photo_filename = unique_filename
         
-        if not color_hex:
-            color_hex_mapping = {
-                'Черный': '#2c3e50',
-                'Белый': '#ecf0f1',
-                'Серый': '#7f8c8d',
-                'Синий': '#3498db',
-                'Зеленый': '#27ae60',
-                'Красный': '#e74c3c',
-                'Желтый': '#f1c40f',
-                'Фиолетовый': '#9b59b6',
-                'Розовый': '#e84393',
-                'Оранжевый': '#e67e22',
-                'Голубой': '#00cec9',
-                'Коричневый': '#a1887f',
-                'Бежевый': '#f5deb3',
-                'Бирюзовый': '#1abc9c',
-                'Мятный': '#98ff98',
-            }
-            color_hex = color_hex_mapping.get(color_name, '#6c757d')
-        
         sock_id = str(uuid.uuid4())
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
@@ -187,58 +166,43 @@ def add_sock_page():
     db = get_db()
     
     color_options = [
-        {'name': 'Черный', 'hex': '#2c3e50'},
-        {'name': 'Белый', 'hex': '#ecf0f1'},
-        {'name': 'Серый', 'hex': '#7f8c8d'},
-        {'name': 'Синий', 'hex': '#3498db'},
-        {'name': 'Зеленый', 'hex': '#27ae60'},
-        {'name': 'Красный', 'hex': '#e74c3c'},
-        {'name': 'Желтый', 'hex': '#f1c40f'},
-        {'name': 'Фиолетовый', 'hex': '#9b59b6'},
-        {'name': 'Розовый', 'hex': '#e84393'},
-        {'name': 'Оранжевый', 'hex': '#e67e22'},
-        {'name': 'Голубой', 'hex': '#00cec9'},
-        {'name': 'Коричневый', 'hex': '#a1887f'},
-        {'name': 'Бежевый', 'hex': '#f5deb3'},
-        {'name': 'Бирюзовый', 'hex': '#1abc9c'},
-        {'name': 'Мятный', 'hex': '#98ff98'},
+        {'name': 'Черные', 'hex': '#2c3e50'},
+        {'name': 'Белые', 'hex': '#ecf0f1'},
+        {'name': 'Серые', 'hex': '#7f8c8d'},
+        {'name': 'Синие', 'hex': '#3498db'},
+        {'name': 'Зеленые', 'hex': '#27ae60'},
+        {'name': 'Красные', 'hex': '#e74c3c'},
+        {'name': 'Желтые', 'hex': '#f1c40f'},
+        {'name': 'Фиолетовые', 'hex': '#9b59b6'},
+        {'name': 'Розовые', 'hex': '#e84393'},
+        {'name': 'Оранжевые', 'hex': '#e67e22'},
+        {'name': 'Голубые', 'hex': '#00cec9'},
+        {'name': 'Коричневые', 'hex': '#a1887f'},
+        {'name': 'Бежевые', 'hex': '#f5deb3'},
+        {'name': 'Бирюзовые', 'hex': '#1abc9c'},
+        {'name': 'Мятные', 'hex': '#98ff98'},
     ]
     
     style_options = [
         'Спортивные', 'Повседневные', 'Домашние', 
-        'Бизнес', 'Длинные', 'Короткие', 'Новогодние',
-        'Полосатые', 'В горошек', 'Термо', 'Шерстяные',
-        'Хлопковые', 'Шелковые', 'Компрессионные', 'Носки-следки'
+        'Бизнес', 'Короткие', 'Термо', 'Вязаные',
+        'Смешные', 'Праздничные'
     ]
     
     pattern_options = [
         'Однотонные', 'Полоска', 'Горошек', 'Клетка',
-        'Геометрия', 'Принт', 'Градиент', 'Мраморные',
-        'Анималистика', 'Абстракция', 'Камуфляж'
+        'Геометрия', 'Принт', 'Логотип'
     ]
     
     material_options = [
-        'Хлопок', 'Шерсть', 'Синтетика', 'Шелк',
-        'Бамбук', 'Кашемир', 'Микрофибра', 'Меринос',
-        'Лен', 'Акрил', 'Полиэстер', 'Спандекс'
+        'Хлопок', 'Шерсть', 'Синтетика', 'Шелк', 'Бамбук', 'Лен',
     ]
     
     size_options = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
     
     brand_options = [
-        'Nike', 'Adidas', 'Puma', 'Reebok', 'Under Armour',
-        'Uniqlo', 'H&M', 'Calvin Klein', 'Hugo Boss', 'Gucci',
-        'Armani', 'Balenciaga', 'New Balance', 'Asics', 'Unknown'
+        'Nike', 'Puma', 'Reebok', 'Uniqlo', 'H&M', 'Wilson', 'Funny Socks', 'Unknown'
     ]
-    
-    recent_socks = db.execute('''
-        SELECT id, color, color_hex, style 
-        FROM socks 
-        ORDER BY created_at DESC 
-        LIMIT 3
-    ''').fetchall()
-    
-    recent_socks_list = [dict(sock) for sock in recent_socks]
     
     return render_template('add_sock.html',
                          color_options=color_options,
@@ -246,8 +210,7 @@ def add_sock_page():
                          pattern_options=pattern_options,
                          material_options=material_options,
                          size_options=size_options,
-                         brand_options=brand_options,
-                         recent_socks=recent_socks_list)
+                         brand_options=brand_options)
 
 @app.route('/toggle_clean/<string:sock_id>', methods=['POST'])
 def toggle_clean(sock_id):

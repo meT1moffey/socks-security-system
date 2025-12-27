@@ -194,25 +194,6 @@
                         </li>
                     </ul>
                 </div>
-
-                <div class="sidebar-card">
-                    <h3><i class="fas fa-history"></i> Последние добавленные</h3>
-                    <div class="recent-socks">
-                        {% if recent_socks %}
-                            {% for sock in recent_socks %}
-                            <div class="recent-sock">
-                                <div class="recent-color" style="background-color: {{ sock.color_hex }}"></div>
-                                <div class="recent-info">
-                                    <strong>{{ sock.color }}</strong>
-                                    <span>{{ sock.style }}</span>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="no-recent">Нет недавно добавленных носков</p>
-                        {% endif %}
-                    </div>
-                </div>
             </div>
         </main>
 
