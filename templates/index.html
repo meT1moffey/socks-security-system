@@ -27,9 +27,10 @@
             </div>
             
             <div class="search-bar">
-                <i class="fas fa-search"></i>
+                <button id="searchBtn">
+                    <i class="fas fa-search"></i>
+                </button>
                 <input type="text" id="searchInput" placeholder="Поиск носков по цвету, стилю или бренду...">
-                <button id="searchBtn">Найти</button>
             </div>
         </header>
 
@@ -192,73 +193,10 @@
                     </table>
                 </div>
             </div>
-
-            <div class="mobile-view">
-                {% for sock in socks %}
-                <div class="sock-card" data-id="{{ sock.id }}" data-clean="{{ 'true' if sock.clean else 'false' }}">
-                    <div class="card-header">
-                        <div class="card-photo">
-                            {% if sock.photo_url %}
-                                <img src="{{ sock.photo_url }}" alt="Носок {{ sock.color }}" loading="lazy">
-                            {% else %}
-                                <div class="photo-placeholder" style="background-color: {{ sock.color_hex or '#6c757d' }}">
-                                    <i class="fas fa-socks"></i>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="card-info">
-                            <h3>{{ sock.color }} носки</h3>
-                            <p class="card-style">{{ sock.style }}</p>
-                            <div class="card-meta">
-                                <span>{{ sock.size }}</span>
-                                {% if sock.brand %}<span>{{ sock.brand }}</span>{% endif %}
-                            </div>
-                        </div>
-                        <div class="card-status">
-                            <div class="clean-status {% if sock.clean %}clean{% else %}dirty{% endif %}">
-                                <i class="fas {% if sock.clean %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-details">
-                        {% if sock.pattern %}
-                        <div class="detail-item">
-                            <span class="detail-label">Узор:</span>
-                            <span>{{ sock.pattern }}</span>
-                        </div>
-                        {% endif %}
-                        {% if sock.material %}
-                        <div class="detail-item">
-                            <span class="detail-label">Материал:</span>
-                            <span>{{ sock.material }}</span>
-                        </div>
-                        {% endif %}
-                        <div class="detail-item">
-                            <span class="detail-label">Носкость:</span>
-                            <div class="wear-count-mobile">
-                                <span>{{ sock.wear_count }} раз</span>
-                                <div class="wear-progress-small">
-                                    <div class="wear-bar" style="width: {{ (sock.wear_count / 10 * 100) if sock.wear_count <= 10 else 100 }}%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-actions">
-                        <button class="action-btn toggle-clean" data-id="{{ sock.id }}">
-                            <i class="fas {% if sock.clean %}fa-broom{% else %}fa-washing-machine{% endif %}"></i>
-                            {{ 'Испачкать' if sock.clean else 'Постирать' }}
-                        </button>
-                        <button class="action-btn btn-delete-mobile" data-id="{{ sock.id }}">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
         </main>
 
         <footer class="footer">
-            <p>© 2025 Органайзер носков. Все права защищены.</p>
+            <p>© 2025 Socks Security System. Все права защищены.</p>
         </footer>
     </div>
 

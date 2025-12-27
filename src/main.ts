@@ -13,7 +13,6 @@ class MainApp {
     public init(): void {
         this.setupEventListeners();
         this.setupFilters();
-        this.setupResponsive();
     }
 
     private setupEventListeners(): void {
@@ -67,24 +66,6 @@ class MainApp {
                 }
             });
         });
-    }
-
-    private setupResponsive(): void {
-        function checkScreenSize() {
-            const table = document.querySelector('.table-responsive');
-            const mobileView = document.querySelector('.mobile-view');
-            
-            if (window.innerWidth <= 768) {
-                if (table) (table as HTMLElement).style.display = 'none';
-                if (mobileView) (mobileView as HTMLElement).style.display = 'block';
-            } else {
-                if (table) (table as HTMLElement).style.display = 'block';
-                if (mobileView) (mobileView as HTMLElement).style.display = 'none';
-            }
-        }
-        
-        checkScreenSize();
-        window.addEventListener('resize', checkScreenSize);
     }
 
     private async performSearch(

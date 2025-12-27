@@ -48,8 +48,8 @@ export async function addSock(formData) {
     });
 }
 export function isValidImageFile(file) {
-    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
-    const maxSize = 16 * 1024 * 1024;
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    const maxSize = 1 << 24;
     if (!allowedTypes.includes(file.type)) {
         return false;
     }

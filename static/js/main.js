@@ -8,7 +8,6 @@ class MainApp {
     init() {
         this.setupEventListeners();
         this.setupFilters();
-        this.setupResponsive();
     }
     setupEventListeners() {
         const searchInput = document.getElementById('searchInput');
@@ -55,26 +54,6 @@ class MainApp {
                 }
             });
         });
-    }
-    setupResponsive() {
-        function checkScreenSize() {
-            const table = document.querySelector('.table-responsive');
-            const mobileView = document.querySelector('.mobile-view');
-            if (window.innerWidth <= 768) {
-                if (table)
-                    table.style.display = 'none';
-                if (mobileView)
-                    mobileView.style.display = 'block';
-            }
-            else {
-                if (table)
-                    table.style.display = 'block';
-                if (mobileView)
-                    mobileView.style.display = 'none';
-            }
-        }
-        checkScreenSize();
-        window.addEventListener('resize', checkScreenSize);
     }
     async performSearch(searchInput, searchResults, mainTable) {
         const query = searchInput.value.trim();
