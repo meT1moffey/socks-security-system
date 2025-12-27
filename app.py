@@ -69,58 +69,9 @@ def close_db(error):
     if hasattr(g, 'db'):
         g.db.close()
 
-def populate_sample_data():
-    db = get_db()
-    count = db.execute('SELECT COUNT(*) as count FROM socks').fetchone()['count']
-    
-    if count == 0:
-        sample_socks = [
-            ('black_sock_1', 'Черный', '#2c3e50', 'Повседневные', 'Однотонные', 
-             'Хлопок', 'M', 'Nike', None, True, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Любимые черные носки', 5),
-            
-            ('white_sock_1', 'Белый', '#ecf0f1', 'Домашние', 'Однотонные', 
-             'Хлопок', 'L', 'Uniqlo', None, False, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             None, 'Нужно постирать', 3),
-            
-            ('blue_sock_1', 'Синий', '#3498db', 'Спортивные', 'Полоска', 
-             'Синтетика', 'M', 'Adidas', None, True, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Для бега', 8),
-            
-            ('green_sock_1', 'Зеленый', '#27ae60', 'Бизнес', 'Однотонные', 
-             'Шерсть', 'L', 'Hugo Boss', None, True, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Деловые встречи', 2),
-            
-            ('red_sock_1', 'Красный', '#e74c3c', 'Новогодние', 'В горошек', 
-             'Хлопок', 'M', 'Unknown', None, False, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             None, 'Праздничные', 1),
-            
-            ('yellow_sock_1', 'Желтый', '#f1c40f', 'Повседневные', 'Геометрия', 
-             'Хлопок', 'S', 'H&M', None, True, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Яркие летние', 4),
-            
-            ('purple_sock_1', 'Фиолетовый', '#9b59b6', 'Длинные', 'Полоска', 
-             'Шерсть', 'XL', 'Unknown', None, True, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 'Зимние теплые', 6),
-            
-            ('gray_sock_1', 'Серый', '#7f8c8d', 'Короткие', 'Однотонные', 
-             'Хлопок', 'M', 'Puma', None, False, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), 
-             None, 'Тренировочные', 7),
-        ]
-        
-        db.executemany('''
-            INSERT INTO socks (id, color, color_hex, style, pattern, material, 
-                              size, brand, photo_filename, clean, created_at, 
-                              last_washed, notes, wear_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', sample_socks)
-        
-        db.commit()
-
 @app.route('/')
 def index():
     db = get_db()
-    populate_sample_data()
     
     socks = db.execute('''
         SELECT * FROM socks 
@@ -149,16 +100,17 @@ def index():
     stats = db.execute('''
         SELECT 
             COUNT(*) as total,
-            SUM(CASE WHEN clean = 1 THEN 1 ELSE 0 END) as clean,
-            SUM(CASE WHEN clean = 0 THEN 1 ELSE 0 END) as dirty,
+            COALESCE(SUM(clean), 0) as clean,
+            COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
             AVG(wear_count) as avg_wear_count
         FROM socks
     ''').fetchone()
+    print(dict(stats))
     
     current_time = datetime.now().strftime('%d.%m.%Y %H:%M')
     
     return render_template('index.html', 
-                         socks=socks_list, 
+                         socks=socks_list,
                          stats=dict(stats),
                          current_time=current_time)
 
@@ -447,5 +399,4 @@ def serve_js(filename):
 if __name__ == '__main__':
     with app.app_context():
         init_db()
-        populate_sample_data()
     app.run(host='0.0.0.0', debug=True)
