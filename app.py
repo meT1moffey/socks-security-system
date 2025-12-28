@@ -4,7 +4,6 @@ import sqlite3
 import os
 from werkzeug.utils import secure_filename
 import uuid
-import subprocess
 import json
 
 app = Flask(__name__)
@@ -376,7 +375,6 @@ def serve_js(filename):
     return send_from_directory('static/js', filename.split('.js')[0] + '.js')
 
 if __name__ == '__main__':
-    subprocess.run(["npm", "run", "build"])
     with app.app_context():
         init_db()
     app.run(host='0.0.0.0', debug=True)
