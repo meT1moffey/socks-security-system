@@ -1,138 +1,242 @@
-import { getStats, searchSocks, getWashHistory, toggleCleanStatus, deleteSock } from './api';
+import { getStats, loadSocks, getWashHistory, toggleCleanStatus, deleteSock } from './api';
 import { NotificationManager, ModalManager } from './utils';
 class MainApp {
     constructor() {
+        this.socksLoaded = 0;
+        this.priority = 'clean';
+        this.query = '';
         this.notificationManager = new NotificationManager();
         this.modalManager = new ModalManager();
     }
     init() {
+        this.loadMoreSocks();
         this.setupEventListeners();
-        this.setupFilters();
+        this.setupPriorities();
     }
     setupEventListeners() {
         const searchInput = document.getElementById('searchInput');
         const searchBtn = document.getElementById('searchBtn');
         const clearSearchBtn = document.getElementById('clearSearch');
-        const searchResults = document.getElementById('searchResults');
-        const mainTable = document.getElementById('mainTable');
-        if (searchBtn && searchInput && searchResults && mainTable) {
-            searchBtn.addEventListener('click', () => this.performSearch(searchInput, searchResults, mainTable));
+        if (searchBtn && searchInput) {
+            searchBtn.addEventListener('click', () => this.performSearch(searchInput));
             searchInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    this.performSearch(searchInput, searchResults, mainTable);
+                    this.performSearch(searchInput);
                 }
             });
         }
-        if (clearSearchBtn && searchResults && mainTable) {
-            clearSearchBtn.addEventListener('click', () => {
+        if (clearSearchBtn) {
+            clearSearchBtn.addEventListener('click', async () => {
                 if (searchInput)
                     searchInput.value = '';
-                searchResults.style.display = 'none';
-                mainTable.style.display = 'block';
+                clearSearchBtn.style.display = 'none';
+                this.query = '';
+                this.clearSocks();
+                await this.loadMoreSocks();
             });
         }
-        const showStatsBtn = document.getElementById('showStatsBtn');
-        if (showStatsBtn) {
-            showStatsBtn.addEventListener('click', () => this.showStats());
-        }
+        document.getElementById('showStatsBtn').addEventListener('click', () => this.showStats());
         const cancelDeleteBtn = document.getElementById('cancelDelete');
         const confirmDeleteBtn = document.getElementById('confirmDelete');
         if (cancelDeleteBtn && confirmDeleteBtn) {
             cancelDeleteBtn.addEventListener('click', () => this.modalManager.close('confirmModal'));
             confirmDeleteBtn.addEventListener('click', () => this.confirmDelete());
         }
-        document.addEventListener('click', (e) => this.handleDynamicEvents(e));
+        const loadMoreBtn = document.getElementById("loadMoreBtn");
+        loadMoreBtn.addEventListener('click', () => {
+            this.loadMoreSocks();
+        });
     }
-    setupFilters() {
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        filterButtons.forEach(button => {
+    setupPriorities() {
+        const priorityButtons = document.querySelectorAll('.priority-btn');
+        priorityButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 const target = e.target;
-                const filter = target.dataset.filter;
-                if (filter) {
-                    this.applyFilter(filter, target);
-                }
+                const priority = target.dataset.priority;
+                if (priority)
+                    this.changePriority(priority, target);
             });
         });
     }
-    async performSearch(searchInput, searchResults, mainTable) {
+    async performSearch(searchInput) {
         const query = searchInput.value.trim();
-        if (!query)
+        if (query == this.query)
             return;
-        try {
-            const data = await searchSocks(query);
-            if (data.success) {
-                this.displaySearchResults(data.results, searchResults);
-                searchResults.style.display = 'block';
-                mainTable.style.display = 'none';
-            }
-        }
-        catch (error) {
-            console.error('Search error:', error);
-            this.notificationManager.show('Ошибка при поиске', 'error');
-        }
+        this.query = query;
+        document.getElementById('clearSearch').style.display = '';
+        this.clearSocks();
+        this.loadMoreSocks();
     }
-    displaySearchResults(results, container) {
-        const resultsContainer = container.querySelector('#searchResultsContainer');
-        if (!resultsContainer)
-            return;
-        if (results.length === 0) {
-            resultsContainer.innerHTML = `
-                <div class="no-results">
-                    <i class="fas fa-search"></i>
-                    <p>Ничего не найдено по вашему запросу</p>
-                </div>
-            `;
-            return;
-        }
-        let html = '<div class="search-results-grid">';
-        results.forEach((sock) => {
-            const photoHtml = sock.photo_url
-                ? `<img src="${sock.photo_url}" alt="${sock.color} носок" loading="lazy">`
-                : `<div class="photo-placeholder" style="background-color: ${sock.color_hex || '#6c757d'}">
-                        <i class="fas fa-socks"></i>
-                    </div>`;
-            html += `
-                <div class="search-result-card" data-id="${sock.id}">
-                    <div class="result-photo">
-                        ${photoHtml}
-                    </div>
-                    <div class="result-info">
-                        <h4>${sock.color} носки</h4>
-                        <p>${sock.style} • ${sock.size}</p>
+    displaySocks(socks) {
+        const isWide = window.innerWidth > 835;
+        const table = document.getElementById(isWide ? 'wideSocksData' : 'thinSocksTable');
+        socks.forEach(sock => {
+            const html = isWide ? `
+                <tr class="sock-row" id="row-${this.socksLoaded}">
+                    <td class="photo-cell">
+                        <div class="photo-container">
+                            ${sock.photo_url ?
+                `<img src="${sock.photo_url}" alt="${sock.color} носки" class="sock-photo" loading="lazy">` :
+                `<div class="photo-placeholder" style="background-color: ${sock.color_hex}">
+                                    <i class="fas fa-socks"></i>
+                                </div>`}
+                        </div>
+                    </td>
+                    <td class="info-cell">
+                        <div class="sock-info">
+                            <h4>${sock.color} носки</h4>
+                            <div class="sock-details">
+                                <span class="detail-item">
+                                    <i class="fas fa-tshirt"></i> ${sock.style}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-shapes"></i> ${sock.pattern}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-spa"></i> ${sock.material}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-tag"></i> ${sock.brand}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-ruler"></i> ${sock.size}
+                                </span>
+                            </div>
+                            <div class="sock-meta">
+                                <small>Добавлено: ${sock.created_at_formatted}</small>
+                                ${sock.last_washed_formatted ? `<small>Стирка: ${sock.last_washed_formatted}</small>` : ``}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="status-cell">
                         <div class="clean-status ${sock.clean ? 'clean' : 'dirty'}">
                             <i class="fas ${sock.clean ? 'fa-check-circle' : 'fa-times-circle'}"></i>
                             <span>${sock.clean ? 'Чистые' : 'Грязные'}</span>
                         </div>
+                    </td>
+                    <td class="wear-cell">
+                        <div class="wear-count">
+                            <div class="wear-progress">
+                                <div class="wear-bar" style="width: ${Math.min(sock.wear_count * 10, 100)}%"></div>
+                            </div>
+                            <span class="wear-number">${sock.wear_count}</span>
+                            <small>раз</small>
+                        </div>
+                        <button class="btn-history">
+                            <i class="fas fa-history"></i> История
+                        </button>
+                    </td>
+                    <td class="actions-cell">
+                        <div class="action-buttons">
+                            <button class="action-btn toggle-clean">
+                                <i class="fas ${sock.clean ? 'fa-shoe-prints' : 'fa-sink'}"></i>
+                                ${sock.clean ? 'Испачкать' : 'Постирать'}
+                            </button>
+                            <button class="action-btn btn-delete">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </td>
+                </tr>` : `
+                <div class="sock-row" id="row-${this.socksLoaded}>
+                    <div class="photo-cell">
+                        <div class="photo-container">
+                            ${sock.photo_url ?
+                `<img src="${sock.photo_url}" alt="${sock.color} носки" class="sock-photo" loading="lazy">` :
+                `<div class="photo-placeholder" style="background-color: ${sock.color_hex}">
+                                    <i class="fas fa-socks"></i>
+                                </div>`}
+                        </div>
                     </div>
-                </div>
-            `;
+                    <div class="info-cell">
+                        <div class="sock-info">
+                            <div class="main-sock-info">
+                                <h4>${sock.color} носки</h4>
+                                <div class="status-cell">
+                                    <div class="clean-status ${sock.clean ? 'clean' : 'dirty'}">
+                                        <i class="fas ${sock.clean ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                                        <span>${sock.clean ? 'Чистые' : 'Грязные'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sock-details">
+                                <span class="detail-item">
+                                    <i class="fas fa-tshirt"></i> ${sock.style}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-shapes"></i> ${sock.pattern}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-spa"></i> ${sock.material}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-tag"></i> ${sock.brand}
+                                </span>
+                                <span class="detail-item">
+                                    <i class="fas fa-ruler"></i> ${sock.size}
+                                </span>
+                            </div>
+                            <div class="sock-meta">
+                                <small>Добавлено: ${sock.created_at_formatted}</small>
+                                ${sock.last_washed_formatted ? `<small>Стирка: ${sock.last_washed_formatted}</small>` : ``}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="wear-cell">
+                        <div class="wear-count">
+                            <div class="wear-progress">
+                                <div class="wear-bar" style="width: ${Math.min(sock.wear_count * 10, 100)}%"></div>
+                            </div>
+                            <span class="wear-number">${sock.wear_count}</span>
+                            <small>раз</small>
+                            <button class="btn-history">
+                                <i class="fas fa-history"></i> История
+                            </button>
+                        </div>
+                    </div>
+                    <div class="actions-cell">
+                        <div class="action-buttons">
+                            <button class="action-btn toggle-clean">
+                                <i class="fas ${sock.clean ? 'fa-shoe-prints' : 'fa-sink'}"></i>
+                                ${sock.clean ? 'Испачкать' : 'Постирать'}
+                            </button>
+                            <button class="action-btn btn-delete">
+                                <i class="fas fa-trash"></i> Удалить
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            table.innerHTML += html;
+            const newRow = document.getElementById(`row-${this.socksLoaded}`);
+            newRow.getElementsByClassName('btn-history')[0].addEventListener('click', (_) => { this.showWashHistory(sock.id); });
+            newRow.getElementsByClassName('toggle-clean')[0].addEventListener('click', (_) => { this.handleToggleClean(sock.id); });
+            newRow.getElementsByClassName('btn-delete')[0].addEventListener('click', (_) => {
+                window.sockToDelete = sock.id;
+                this.modalManager.open('confirmModal');
+            });
+            this.socksLoaded++;
         });
-        html += '</div>';
-        resultsContainer.innerHTML = html;
     }
-    applyFilter(filter, button) {
-        const filterButtons = document.querySelectorAll('.filter-btn');
-        const sockRows = document.querySelectorAll('.sock-row, .sock-card');
-        filterButtons.forEach(btn => btn.classList.remove('active'));
+    clearSocks() {
+        const isWide = window.innerWidth > 835;
+        const table = document.getElementById(isWide ? 'wideSocksData' : 'thinSocksTable');
+        table.innerHTML = "";
+        this.socksLoaded = 0;
+    }
+    async loadMoreSocks() {
+        console.log(this.query, this.socksLoaded, 10, this.priority);
+        const data = await loadSocks(this.query, this.socksLoaded, 10, this.priority);
+        if (!data)
+            return;
+        this.displaySocks(data);
+    }
+    async changePriority(priority, button) {
+        document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
-        sockRows.forEach(row => {
-            const isClean = row.getAttribute('data-clean') === 'true';
-            const wearCount = parseInt(row.getAttribute('data-wear') || '0');
-            let shouldShow = true;
-            switch (filter) {
-                case 'clean':
-                    shouldShow = isClean;
-                    break;
-                case 'dirty':
-                    shouldShow = !isClean;
-                    break;
-                case 'frequent':
-                    shouldShow = wearCount > 5;
-                    break;
-            }
-            row.style.display = shouldShow ? '' : 'none';
-        });
+        this.priority = priority;
+        console.log(priority);
+        this.clearSocks();
+        await this.loadMoreSocks();
     }
     async showStats() {
         try {
@@ -233,31 +337,6 @@ class MainApp {
             `;
         }
         statsContent.innerHTML = html;
-    }
-    handleDynamicEvents(e) {
-        const target = e.target;
-        const deleteBtn = target.closest('.btn-delete') || target.closest('.btn-delete-mobile');
-        if (deleteBtn) {
-            const sockId = deleteBtn.getAttribute('data-id');
-            if (sockId) {
-                window.sockToDelete = sockId;
-                this.modalManager.open('confirmModal');
-            }
-        }
-        const toggleBtn = target.closest('.toggle-clean');
-        if (toggleBtn) {
-            const sockId = toggleBtn.getAttribute('data-id');
-            if (sockId) {
-                this.handleToggleClean(sockId);
-            }
-        }
-        const historyBtn = target.closest('.btn-history');
-        if (historyBtn) {
-            const sockId = historyBtn.getAttribute('data-id');
-            if (sockId) {
-                this.showWashHistory(sockId);
-            }
-        }
     }
     async handleToggleClean(sockId) {
         try {

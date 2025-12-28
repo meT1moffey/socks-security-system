@@ -4,6 +4,8 @@ import sqlite3
 import os
 from werkzeug.utils import secure_filename
 import uuid
+import subprocess
+import json
 
 app = Flask(__name__)
 app.config['DATABASE'] = 'socks.db'
@@ -74,7 +76,7 @@ def index():
     
     socks = db.execute('''
         SELECT * FROM socks 
-        ORDER BY CASE WHEN clean = 1 THEN 1 ELSE 2 END, created_at DESC
+        ORDER BY clean DESC
     ''').fetchall()
     
     socks_list = []
@@ -93,7 +95,8 @@ def index():
             sock_dict['photo_url'] = url_for('static', filename=f'uploads/{sock_dict["photo_filename"]}')
         else:
             sock_dict['photo_url'] = None
-            
+        
+        sock_dict['data'] = json.dumps(sock_dict)
         socks_list.append(sock_dict)
     
     stats = db.execute('''
@@ -104,14 +107,57 @@ def index():
             AVG(wear_count) as avg_wear_count
         FROM socks
     ''').fetchone()
-    print(dict(stats))
     
     current_time = datetime.now().strftime('%d.%m.%Y %H:%M')
     
-    return render_template('index.html', 
-                         socks=socks_list,
+    return render_template('index.html',
                          stats=dict(stats),
                          current_time=current_time)
+
+@app.route('/api/load', methods=['GET'])
+def load_socks():
+    query = '%' + request.args['query'] + '%'
+    offset = int(request.args['offset'])
+    limit = int(request.args['limit'])
+    
+    priority = request.args['priority']
+    order = {
+        'clean': 'clean DESC',
+        'dirty': 'clean ASC',
+        'frequent': 'wear_count DESC'
+    }[priority]
+    print(query)
+
+    db = get_db()
+    socks = db.execute(f'''
+        SELECT * FROM socks
+        WHERE color LIKE ? OR style LIKE ? OR brand LIKE ? OR ? == "%%"
+        ORDER BY {order}, created_at DESC
+        LIMIT ? OFFSET ?
+    ''', (query, query, query, query, limit, offset)).fetchall()
+    
+    socks_list = []
+    for sock in socks:
+        sock_dict = dict(sock)
+        if sock_dict['created_at']:
+            sock_dict['created_at_formatted'] = datetime.strptime(
+                sock_dict['created_at'], '%Y-%m-%d %H:%M:%S'
+            ).strftime('%d.%m.%Y')
+        if sock_dict['last_washed']:
+            sock_dict['last_washed_formatted'] = datetime.strptime(
+                sock_dict['last_washed'], '%Y-%m-%d %H:%M:%S'
+            ).strftime('%d.%m.%Y')
+        
+        if sock_dict['photo_filename']:
+            sock_dict['photo_url'] = url_for('static', filename=f'uploads/{sock_dict["photo_filename"]}')
+        else:
+            sock_dict['photo_url'] = None
+        
+        sock_dict['data'] = json.dumps(sock_dict)
+        socks_list.append(sock_dict)
+    
+    return jsonify(socks_list)
+
 
 @app.route('/add', methods=['POST'])
 def add_sock():
@@ -278,8 +324,8 @@ def get_stats():
     stats = db.execute('''
         SELECT 
             COUNT(*) as total,
-            SUM(CASE WHEN clean = 1 THEN 1 ELSE 0 END) as clean,
-            SUM(CASE WHEN clean = 0 THEN 1 ELSE 0 END) as dirty,
+            COALESCE(SUM(clean), 0) as clean,
+            COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
             COUNT(DISTINCT color) as colors_count,
             COUNT(DISTINCT style) as styles_count,
             SUM(wear_count) as total_wears,
@@ -289,7 +335,7 @@ def get_stats():
     
     color_stats = db.execute('''
         SELECT color, color_hex, COUNT(*) as count,
-               SUM(CASE WHEN clean = 1 THEN 1 ELSE 0 END) as clean_count
+               COALESCE(SUM(clean), 0) as clean_count
         FROM socks
         GROUP BY color, color_hex
         ORDER BY count DESC
@@ -307,36 +353,6 @@ def get_stats():
         'stats': dict(stats),
         'color_stats': [dict(row) for row in color_stats],
         'style_stats': [dict(row) for row in style_stats]
-    })
-
-@app.route('/api/search')
-def search_socks():
-    query = request.args.get('q', '')
-    
-    if not query:
-        return jsonify({'success': False, 'message': 'Пустой запрос'}), 400
-    
-    db = get_db()
-    
-    socks = db.execute('''
-        SELECT * FROM socks 
-        WHERE color LIKE ? OR style LIKE ? OR brand LIKE ? OR notes LIKE ?
-        ORDER BY created_at DESC
-    ''', (f'%{query}%', f'%{query}%', f'%{query}%', f'%{query}%')).fetchall()
-    
-    socks_list = []
-    for sock in socks:
-        sock_dict = dict(sock)
-        if sock_dict['photo_filename']:
-            sock_dict['photo_url'] = url_for('static', filename=f'uploads/{sock_dict["photo_filename"]}')
-        else:
-            sock_dict['photo_url'] = None
-        socks_list.append(sock_dict)
-    
-    return jsonify({
-        'success': True,
-        'results': socks_list,
-        'count': len(socks_list)
     })
 
 @app.route('/api/wash_history/<string:sock_id>')
@@ -360,6 +376,7 @@ def serve_js(filename):
     return send_from_directory('static/js', filename.split('.js')[0] + '.js')
 
 if __name__ == '__main__':
+    subprocess.run(["npm", "run", "build"])
     with app.app_context():
         init_db()
     app.run(host='0.0.0.0', debug=True)

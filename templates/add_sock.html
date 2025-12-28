@@ -111,7 +111,7 @@
                             <label for="brand">
                                 <i class="fas fa-tag"></i> Бренд
                             </label>
-                            <select id="brand" name="brand">
+                            <select id="brand" name="brand" required>
                                 <option value="">Выберите бренд</option>
                                 {% for brand in brand_options %}
                                 <option value="{{ brand }}">{{ brand }}</option>

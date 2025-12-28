@@ -25,9 +25,9 @@ export async function getStats(): Promise<any> {
     return fetchApi<any>('/api/stats');
 }
 
-export async function searchSocks(query: string): Promise<any> {
+export async function loadSocks(query: string, offset: number, limit: number, priority: string): Promise<any> {
     const encodedQuery = encodeURIComponent(query);
-    return fetchApi<any>(`/api/search?q=${encodedQuery}`);
+    return fetchApi<any>(`/api/load?query=${encodedQuery}&offset=${offset}&limit=${limit}&priority=${priority}`);
 }
 
 export async function getWashHistory(sockId: string): Promise<any> {

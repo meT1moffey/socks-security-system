@@ -21,9 +21,9 @@ async function fetchApi(endpoint, options = {}) {
 export async function getStats() {
     return fetchApi('/api/stats');
 }
-export async function searchSocks(query) {
+export async function loadSocks(query, offset, limit, priority) {
     const encodedQuery = encodeURIComponent(query);
-    return fetchApi(`/api/search?q=${encodedQuery}`);
+    return fetchApi(`/api/load?query=${encodedQuery}&offset=${offset}&limit=${limit}&priority=${priority}`);
 }
 export async function getWashHistory(sockId) {
     return fetchApi(`/api/wash_history/${sockId}`);

@@ -17,7 +17,7 @@
                     <h1>Socks Security System</h1>
                 </div>
                 <div class="header-actions">
-                    <a href="{{ url_for('add_sock_page') }}" class="add-btn">
+                    <a href="/add" class="add-btn">
                         <i class="fas fa-plus"></i> Добавить носок
                     </a>
                     <button class="stats-btn" id="showStatsBtn">
@@ -77,121 +77,39 @@
         </div>
 
         <main class="main-content">
-            <div class="table-container">
-                <div class="table-header">
-                    <h2><i class="fas fa-list"></i> Коллекция носков <span class="badge">{{ stats.total }}</span></h2>
-                    <div class="filters">
-                        <button class="filter-btn active" data-filter="all">Все</button>
-                        <button class="filter-btn" data-filter="clean">Чистые</button>
-                        <button class="filter-btn" data-filter="dirty">Грязные</button>
-                        <button class="filter-btn" data-filter="frequent">Часто носимые</button>
-                    </div>
+            <div class="table-header">
+                <h2><i class="fas fa-list"></i> Коллекция носков <span class="badge">{{ stats.total }}</span></h2>
+                <div>
+                    <button class="priority-btn active" data-priority="clean">Чистые</button>
+                    <button class="priority-btn" data-priority="dirty">Грязные</button>
+                    <button class="priority-btn" data-priority="frequent">Часто носимые</button>
                 </div>
-                
-                <div id="searchResults" style="display: none;">
-                    <div class="search-results-header">
-                        <h3>Результаты поиска</h3>
-                        <button id="clearSearch" class="clear-search-btn">
-                            <i class="fas fa-times"></i> Очистить поиск
-                        </button>
-                    </div>
-                    <div class="search-results-container" id="searchResultsContainer">
-                    </div>
-                </div>
-                
-                <div class="table-responsive" id="mainTable">
-                    <table class="socks-table">
-                        <thead>
-                            <tr>
-                                <th class="photo-col">Фото</th>
-                                <th class="info-col">Информация</th>
-                                <th class="status-col">Статус</th>
-                                <th class="wear-col">Носкость</th>
-                                <th class="actions-col">Действия</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for sock in socks %}
-                            <tr class="sock-row" data-id="{{ sock.id }}" data-clean="{{ 'true' if sock.clean else 'false' }}" data-wear="{{ sock.wear_count }}">
-                                <td class="photo-cell">
-                                    <div class="photo-container">
-                                        {% if sock.photo_url %}
-                                            <img src="{{ sock.photo_url }}" alt="Носок {{ sock.color }}" class="sock-photo" loading="lazy">
-                                        {% else %}
-                                            <div class="photo-placeholder" style="background-color: {{ sock.color_hex or '#6c757d' }}">
-                                                <i class="fas fa-socks"></i>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                <td class="info-cell">
-                                    <div class="sock-info">
-                                        <h4>{{ sock.color }} носки</h4>
-                                        <div class="sock-details">
-                                            <span class="detail-item">
-                                                <i class="fas fa-tshirt"></i> {{ sock.style }}
-                                            </span>
-                                            {% if sock.pattern %}
-                                            <span class="detail-item">
-                                                <i class="fas fa-shapes"></i> {{ sock.pattern }}
-                                            </span>
-                                            {% endif %}
-                                            {% if sock.material %}
-                                            <span class="detail-item">
-                                                <i class="fas fa-spa"></i> {{ sock.material }}
-                                            </span>
-                                            {% endif %}
-                                            {% if sock.brand %}
-                                            <span class="detail-item">
-                                                <i class="fas fa-tag"></i> {{ sock.brand }}
-                                            </span>
-                                            {% endif %}
-                                            <span class="detail-item">
-                                                <i class="fas fa-ruler"></i> {{ sock.size }}
-                                            </span>
-                                        </div>
-                                        <div class="sock-meta">
-                                            <small>Добавлено: {{ sock.created_at_formatted }}</small>
-                                            {% if sock.last_washed_formatted %}
-                                            <small>Стирка: {{ sock.last_washed_formatted }}</small>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="status-cell">
-                                    <div class="clean-status {% if sock.clean %}clean{% else %}dirty{% endif %}">
-                                        <i class="fas {% if sock.clean %}fa-check-circle{% else %}fa-times-circle{% endif %}"></i>
-                                        <span>{% if sock.clean %}Чистые{% else %}Грязные{% endif %}</span>
-                                    </div>
-                                </td>
-                                <td class="wear-cell">
-                                    <div class="wear-count">
-                                        <div class="wear-progress">
-                                            <div class="wear-bar" style="width: {{ (sock.wear_count / 10 * 100) if sock.wear_count <= 10 else 100 }}%"></div>
-                                        </div>
-                                        <span class="wear-number">{{ sock.wear_count }}</span>
-                                        <small>раз</small>
-                                    </div>
-                                    <button class="btn-history" data-id="{{ sock.id }}">
-                                        <i class="fas fa-history"></i> История
-                                    </button>
-                                </td>
-                                <td class="actions-cell">
-                                    <div class="action-buttons">
-                                        <button class="action-btn toggle-clean" data-id="{{ sock.id }}">
-                                            <i class="fas {% if sock.clean %}fa-shoe-prints{% else %}fa-sink{% endif %}"></i>
-                                            {{ 'Испачкать' if sock.clean else 'Постирать' }}
-                                        </button>
-                                        <button class="action-btn btn-delete" data-id="{{ sock.id }}">
-                                            <i class="fas fa-trash"></i> Удалить
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+            </div>
+            
+            <button id="clearSearch" class="clear-search-btn" style="display:none;">
+                <i class="fas fa-times"></i> Очистить поиск
+            </button>
+            
+            <table id="wideSocksTable">
+                <thead>
+                    <tr>
+                        <th class="photo-col">Фото</th>
+                        <th class="info-col">Информация</th>
+                        <th class="status-col">Статус</th>
+                        <th class="wear-col">Носкость</th>
+                        <th class="actions-col">Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="wideSocksData"></tbody>
+            </table>
+
+            <div id="thinSocksTable"></div>
+
+            <div class="table-end">
+                <button id="loadMoreBtn">
+                    <i class="fas fa-plus"></i>
+                    Загрузить еще...
+                </button>
             </div>
         </main>
 
