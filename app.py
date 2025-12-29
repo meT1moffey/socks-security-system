@@ -20,6 +20,7 @@ def allowed_file(filename):
 
 def get_db():
     db_url = os.environ.get('MYSQL_URL')
+    print(db_url)
     
     if db_url and db_url.startswith('mysql://'):
         from urllib.parse import urlparse
