@@ -25,6 +25,16 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+def img_url(filename):
+    if BUCKET_NAME:
+        return s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': BUCKET_NAME, 'Key': filename},
+            ExpiresIn=604800
+        )
+    else:
+        return f"/{os.path.join(app.config['UPLOAD_FOLDER'], filename)}"
+
 def save_img(file):
     filename = secure_filename(file.filename)
     if BUCKET_NAME:
@@ -34,15 +44,10 @@ def save_img(file):
             filename,
             ExtraArgs={'ContentType': file.content_type}
         )
-        return s3_client.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': BUCKET_NAME, 'Key': filename},
-            ExpiresIn=3600
-        )
     else:
         local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(local_path)
-        return f"/{local_path}"
+    return img_url(filename)
 
 def delete_img(photo_url):
     if BUCKET_NAME:
@@ -93,7 +98,7 @@ def init_db():
                 material TEXT NOT NULL,
                 size TEXT NOT NULL,
                 brand TEXT NOT NULL,
-                photo_url TEXT,
+                photo_name TEXT,
                 clean BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_washed TIMESTAMP,
@@ -171,6 +176,9 @@ def load_socks():
         sock_dict['last_washed_formatted'] = datetime.strptime(
             str(sock_dict['last_washed']), '%Y-%m-%d %H:%M:%S'
         ).strftime('%d.%m.%Y')
+
+        if sock_dict['photo_name']:
+            sock_dict['photo_url'] = img_url(sock_dict['photo_name'])
         
         socks_list.append(sock_dict)
     
@@ -187,23 +195,23 @@ def add_sock():
     size = request.form.get('size')
     brand = request.form.get('brand')
     
-    photo_url = None
+    photo_name = None
     if 'photo' in request.files:
         file = request.files['photo']
         if file and file.filename != '' and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            photo_url = save_img(file)
+            photo_name = save_img(file)
     
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     with get_db().cursor() as db:
         db.execute('''
             INSERT INTO socks (color, color_hex, style, pattern, material, 
-                            size, brand, photo_url, clean, created_at, 
+                            size, brand, photo_name, clean, created_at, 
                             last_washed, wear_count)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s, 0)
         ''', (color_name, color_hex, style, pattern, material, 
-            size, brand, photo_url, current_time, current_time))
+            size, brand, photo_name, current_time, current_time))
     
     return jsonify({
         'success': True,
