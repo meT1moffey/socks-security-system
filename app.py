@@ -242,9 +242,6 @@ def toggle_clean(sock_id):
         db.execute('SELECT clean, wear_count FROM socks WHERE id = %s', (sock_id,))
         sock = db.fetchone()
     
-    if not sock:
-        return jsonify({'success': False, 'message': 'Носок не найден'}), 404
-    
     new_clean_status = not sock['clean']
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
