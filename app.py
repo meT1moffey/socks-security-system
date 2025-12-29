@@ -34,7 +34,11 @@ def save_img(file):
             filename,
             ExtraArgs={'ContentType': file.content_type}
         )
-        return f"https://{BUCKET_NAME}.s3.{os.environ['BUCKET_REGION']}.railway.app/{filename}"
+        return s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': BUCKET_NAME, 'Key': filename},
+            ExpiresIn=3600
+        )
     else:
         local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(local_path)
