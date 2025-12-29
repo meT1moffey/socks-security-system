@@ -296,7 +296,7 @@ def toggle_clean(sock_id):
 @app.route('/delete_sock/<string:sock_id>', methods=['DELETE'])
 def delete_sock(sock_id):
     with get_db().cursor() as db:
-        db.execute('SELECT photo_url FROM socks WHERE id = %s', (sock_id,))
+        db.execute('SELECT photo_name FROM socks WHERE id = %s', (sock_id,))
         sock = db.fetchone()
 
     if sock and sock['photo_name']:
