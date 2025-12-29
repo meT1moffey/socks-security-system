@@ -34,7 +34,7 @@ def save_img(file):
             filename,
             ExtraArgs={'ContentType': file.content_type}
         )
-        return f"{os.environ['BUCKET_ENDPOINT']}/{BUCKET_NAME}/{filename}"
+        return f"https://{BUCKET_NAME}.s3.{os.environ['BUCKET_REGION']}.railway.app/{filename}"
     else:
         local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(local_path)
