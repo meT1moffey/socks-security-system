@@ -47,7 +47,7 @@ def save_img(file):
     else:
         local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(local_path)
-    return img_url(filename)
+    return filename
 
 def delete_img(photo_url):
     if BUCKET_NAME:
