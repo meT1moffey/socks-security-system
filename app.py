@@ -49,12 +49,11 @@ def save_img(file):
         file.save(local_path)
     return filename
 
-def delete_img(photo_url):
+def delete_img(photo_name):
     if BUCKET_NAME:
-        filename = photo_url.split(f"{os.environ['BUCKET_ENDPOINT']}/{BUCKET_NAME}/")[-1]
-        s3_client.delete_object(Bucket=BUCKET_NAME, Key=filename)
+        s3_client.delete_object(Bucket=BUCKET_NAME, Key=photo_name)
     else:
-        local_path = photo_url.lstrip('/')
+        local_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_name)
         if os.path.exists(local_path):
             os.remove(local_path)
 
@@ -300,8 +299,8 @@ def delete_sock(sock_id):
         db.execute('SELECT photo_url FROM socks WHERE id = %s', (sock_id,))
         sock = db.fetchone()
 
-    if sock and sock['photo_url']:
-        delete_img(sock['photo_url'])
+    if sock and sock['photo_name']:
+        delete_img(sock['photo_name'])
     
     with get_db().cursor() as db:
         db.execute('DELETE FROM socks WHERE id = %s', (sock_id,))
