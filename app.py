@@ -1,10 +1,9 @@
-from flask import Flask, render_template, jsonify, request, url_for, g, send_from_directory
+from flask import Flask, render_template, jsonify, request, g, send_from_directory
 from datetime import datetime
 import pymysql
 import os
 from werkzeug.utils import secure_filename
-import uuid
-import json
+import boto3
 
 app = Flask(__name__)
 app.config['DATABASE'] = 'socks.db'
@@ -12,11 +11,43 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 1 << 24
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'webp'}
 
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+BUCKET_NAME = os.environ.get('BUCKET_NAME')
+if BUCKET_NAME:
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=os.environ['BUCKET_ENDPOINT'],
+        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+        region_name=os.environ['BUCKET_REGION']
+    )
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def save_img(file):
+    filename = secure_filename(file.filename)
+    if BUCKET_NAME:
+        s3_client.upload_fileobj(
+            file,
+            BUCKET_NAME,
+            filename,
+            ExtraArgs={'ContentType': file.content_type}
+        )
+        return f"{os.environ['BUCKET_ENDPOINT']}/{BUCKET_NAME}/{filename}"
+    else:
+        local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(local_path)
+        return f"/{local_path}"
+
+def delete_img(photo_url):
+    if BUCKET_NAME:
+        filename = photo_url.split(f"{os.environ['BUCKET_ENDPOINT']}/{BUCKET_NAME}/")[-1]
+        s3_client.delete_object(Bucket=BUCKET_NAME, Key=filename)
+    else:
+        local_path = photo_url.lstrip('/')
+        if os.path.exists(local_path):
+            os.remove(local_path)
 
 def get_db():
     db_url = os.environ.get('MYSQL_URL')
@@ -58,7 +89,7 @@ def init_db():
                 material TEXT NOT NULL,
                 size TEXT NOT NULL,
                 brand TEXT NOT NULL,
-                photo_filename TEXT,
+                photo_url TEXT,
                 clean BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_washed TIMESTAMP,
@@ -129,22 +160,14 @@ def load_socks():
     for sock in socks:
         sock_dict = dict(sock)
 
-        sock_dict['created_at'] = str(sock_dict['created_at'])
         sock_dict['created_at_formatted'] = datetime.strptime(
             str(sock_dict['created_at']), '%Y-%m-%d %H:%M:%S'
         ).strftime('%d.%m.%Y')
         
-        sock_dict['last_washed'] = str(sock_dict['last_washed'])
         sock_dict['last_washed_formatted'] = datetime.strptime(
             str(sock_dict['last_washed']), '%Y-%m-%d %H:%M:%S'
         ).strftime('%d.%m.%Y')
         
-        if sock_dict['photo_filename']:
-            sock_dict['photo_url'] = url_for('static', filename=f'uploads/{sock_dict["photo_filename"]}')
-        else:
-            sock_dict['photo_url'] = None
-        
-        sock_dict['data'] = json.dumps(sock_dict)
         socks_list.append(sock_dict)
     
     return jsonify(socks_list)
@@ -160,26 +183,23 @@ def add_sock():
     size = request.form.get('size')
     brand = request.form.get('brand')
     
-    photo_filename = None
+    photo_url = None
     if 'photo' in request.files:
         file = request.files['photo']
         if file and file.filename != '' and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4().hex[:8]}_{filename}"
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            file.save(file_path)
-            photo_filename = unique_filename
+            photo_url = save_img(file)
     
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     with get_db().cursor() as db:
         db.execute('''
             INSERT INTO socks (color, color_hex, style, pattern, material, 
-                            size, brand, photo_filename, clean, created_at, 
+                            size, brand, photo_url, clean, created_at, 
                             last_washed, wear_count)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s, 0)
         ''', (color_name, color_hex, style, pattern, material, 
-            size, brand, photo_filename, current_time, current_time))
+            size, brand, photo_url, current_time, current_time))
     
     return jsonify({
         'success': True,
@@ -265,13 +285,11 @@ def toggle_clean(sock_id):
 @app.route('/delete_sock/<string:sock_id>', methods=['DELETE'])
 def delete_sock(sock_id):
     with get_db().cursor() as db:
-        db.execute('SELECT photo_filename FROM socks WHERE id = %s', (sock_id,))
+        db.execute('SELECT photo_url FROM socks WHERE id = %s', (sock_id,))
         sock = db.fetchone()
-    
-    if sock and sock['photo_filename']:
-        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], sock['photo_filename'])
-        if os.path.exists(photo_path):
-            os.remove(photo_path)
+
+    if sock and sock['photo_url']:
+        delete_img(sock['photo_url'])
     
     with get_db().cursor() as db:
         db.execute('DELETE FROM socks WHERE id = %s', (sock_id,))
