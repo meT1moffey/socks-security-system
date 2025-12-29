@@ -138,7 +138,7 @@ class MainApp {
                         </div>
                     </td>
                 </tr>` : `
-                <div class="sock-row" id="row-${this.socksLoaded}>
+                <div class="sock-row" id="row-${this.socksLoaded}">
                     <div class="photo-cell">
                         <div class="photo-container">
                             ${sock.photo_url ?
@@ -206,11 +206,11 @@ class MainApp {
                         </div>
                     </div>
                 </div>`;
-            table.innerHTML += html;
+            table.insertAdjacentHTML('beforeend', html);
             const newRow = document.getElementById(`row-${this.socksLoaded}`);
-            newRow.getElementsByClassName('btn-history')[0].addEventListener('click', (_) => { this.showWashHistory(sock.id); });
-            newRow.getElementsByClassName('toggle-clean')[0].addEventListener('click', (_) => { this.handleToggleClean(sock.id); });
-            newRow.getElementsByClassName('btn-delete')[0].addEventListener('click', (_) => {
+            newRow.getElementsByClassName('btn-history')[0].addEventListener('click', _ => this.showWashHistory(sock.id));
+            newRow.getElementsByClassName('toggle-clean')[0].addEventListener('click', _ => this.handleToggleClean(sock.id));
+            newRow.getElementsByClassName('btn-delete')[0].addEventListener('click', _ => {
                 window.sockToDelete = sock.id;
                 this.modalManager.open('confirmModal');
             });
@@ -223,9 +223,8 @@ class MainApp {
         table.innerHTML = "";
         this.socksLoaded = 0;
     }
-    async loadMoreSocks() {
-        console.log(this.query, this.socksLoaded, 10, this.priority);
-        const data = await loadSocks(this.query, this.socksLoaded, 10, this.priority);
+    async loadMoreSocks(load = 10) {
+        const data = await loadSocks(this.query, this.socksLoaded, load, this.priority);
         if (!data)
             return;
         this.displaySocks(data);
@@ -234,21 +233,14 @@ class MainApp {
         document.querySelectorAll('.priority-btn').forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
         this.priority = priority;
-        console.log(priority);
         this.clearSocks();
         await this.loadMoreSocks();
     }
     async showStats() {
-        try {
-            const data = await getStats();
-            if (data.success) {
-                this.displayStats(data);
-                this.modalManager.open('statsModal');
-            }
-        }
-        catch (error) {
-            console.error('Stats error:', error);
-            this.notificationManager.show('Ошибка при загрузке статистики', 'error');
+        const data = await getStats();
+        if (data.success) {
+            this.displayStats(data);
+            this.modalManager.open('statsModal');
         }
     }
     displayStats(data) {
@@ -339,48 +331,21 @@ class MainApp {
         statsContent.innerHTML = html;
     }
     async handleToggleClean(sockId) {
-        try {
-            const data = await toggleCleanStatus(sockId);
-            if (data.success) {
-                window.location.reload();
-            }
-        }
-        catch (error) {
-            console.error('Toggle clean error:', error);
-            this.notificationManager.show('Ошибка при изменении статуса', 'error');
-        }
+        await toggleCleanStatus(sockId);
+        let socksLoaded = this.socksLoaded;
+        this.clearSocks();
+        await this.loadMoreSocks(socksLoaded);
     }
     async showWashHistory(sockId) {
-        try {
-            const data = await getWashHistory(sockId);
-            if (data.success) {
-                this.displayWashHistory(sockId, data.history);
-                this.modalManager.open('historyModal');
-            }
-        }
-        catch (error) {
-            console.error('History error:', error);
-            this.notificationManager.show('Ошибка при загрузке истории', 'error');
-        }
+        const data = await getWashHistory(sockId);
+        this.displayWashHistory(data.history);
+        this.modalManager.open('historyModal');
     }
-    displayWashHistory(sockId, history) {
+    displayWashHistory(history) {
         const historyContent = document.getElementById('historyContent');
         if (!historyContent)
             return;
-        const sockRow = document.querySelector(`[data-id="${sockId}"]`);
-        let sockColor = '';
-        if (sockRow) {
-            const colorElement = sockRow.querySelector('.sock-info h4');
-            if (colorElement) {
-                sockColor = colorElement.textContent || '';
-            }
-        }
-        let html = `
-            <div class="history-header">
-                <h3>${sockColor}</h3>
-                <p>История стирок</p>
-            </div>
-        `;
+        let html = ``;
         if (!history || history.length === 0) {
             html += `
                 <div class="no-history">
@@ -428,9 +393,9 @@ class MainApp {
                 if (card)
                     card.remove();
                 this.notificationManager.show('Носок успешно удален');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                let socksLoaded = this.socksLoaded;
+                this.clearSocks();
+                await this.loadMoreSocks(socksLoaded - 1);
             }
             else {
                 this.notificationManager.show(data.message || 'Ошибка при удалении', 'error');

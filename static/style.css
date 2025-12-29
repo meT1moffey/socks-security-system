@@ -738,13 +738,6 @@ body {
     background: #5a6268;
 }
 
-.history-header {
-    text-align: center;
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #f8f9fa;
-}
-
 .history-list {
     max-height: 400px;
     overflow-y: auto;

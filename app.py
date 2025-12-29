@@ -1,6 +1,6 @@
-from flask import Flask, render_template, jsonify, request, redirect, url_for, g, send_from_directory
+from flask import Flask, render_template, jsonify, request, url_for, g, send_from_directory
 from datetime import datetime
-import sqlite3
+import pymysql
 import os
 from werkzeug.utils import secure_filename
 import uuid
@@ -19,46 +19,61 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(app.config['DATABASE'])
-        g.db.row_factory = sqlite3.Row
-    return g.db
+    db_url = os.environ.get('DATABASE_URL')
+    
+    if db_url and db_url.startswith('mysql://'):
+        from urllib.parse import urlparse
+        url = urlparse(db_url)
+        conn = pymysql.connect(
+            host=url.hostname,
+            user=url.username,
+            password=url.password,
+            database=url.path.lstrip('/'),
+            port=url.port or 3306,
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+    else:
+        conn = pymysql.connect(
+            host='localhost',
+            user='user',
+            password='123',
+            database='sss',
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor,
+            autocommit=True
+        )
+    return conn
 
 def init_db():
-    db = get_db()
-    
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS socks (
-            id TEXT PRIMARY KEY,
-            color TEXT NOT NULL,
-            color_hex TEXT NOT NULL,
-            style TEXT NOT NULL,
-            pattern TEXT,
-            material TEXT,
-            size TEXT,
-            brand TEXT,
-            photo_filename TEXT,
-            clean BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_washed TIMESTAMP,
-            wear_count INTEGER DEFAULT 0
-        )
-    ''')
-    
-    db.execute('''
-        CREATE TABLE IF NOT EXISTS wash_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sock_id TEXT NOT NULL,
-            wash_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (sock_id) REFERENCES socks (id)
-        )
-    ''')
-    
-    db.execute('CREATE INDEX IF NOT EXISTS idx_socks_clean ON socks(clean)')
-    db.execute('CREATE INDEX IF NOT EXISTS idx_socks_color ON socks(color)')
-    db.execute('CREATE INDEX IF NOT EXISTS idx_socks_style ON socks(style)')
-    
-    db.commit()
+    with get_db().cursor() as db:
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS socks (
+                id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                color VARCHAR(10) NOT NULL,
+                color_hex VARCHAR(7) NOT NULL,
+                style VARCHAR(12) NOT NULL,
+                pattern TEXT NOT NULL,
+                material TEXT NOT NULL,
+                size TEXT NOT NULL,
+                brand TEXT NOT NULL,
+                photo_filename TEXT,
+                clean BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_washed TIMESTAMP,
+                wear_count INTEGER DEFAULT 0
+            )
+        ''')
+
+        db.execute('''
+            CREATE TABLE IF NOT EXISTS wash_history (
+                id INTEGER PRIMARY KEY AUTO_INCREMENT,
+                sock_id INTEGER NOT NULL,
+                wash_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sock_id) REFERENCES socks (id)
+            )
+        ''')
 
 @app.before_request
 def before_request():
@@ -71,41 +86,16 @@ def close_db(error):
 
 @app.route('/')
 def index():
-    db = get_db()
-    
-    socks = db.execute('''
-        SELECT * FROM socks 
-        ORDER BY clean DESC
-    ''').fetchall()
-    
-    socks_list = []
-    for sock in socks:
-        sock_dict = dict(sock)
-        if sock_dict['created_at']:
-            sock_dict['created_at_formatted'] = datetime.strptime(
-                sock_dict['created_at'], '%Y-%m-%d %H:%M:%S'
-            ).strftime('%d.%m.%Y')
-        if sock_dict['last_washed']:
-            sock_dict['last_washed_formatted'] = datetime.strptime(
-                sock_dict['last_washed'], '%Y-%m-%d %H:%M:%S'
-            ).strftime('%d.%m.%Y')
-        
-        if sock_dict['photo_filename']:
-            sock_dict['photo_url'] = url_for('static', filename=f'uploads/{sock_dict["photo_filename"]}')
-        else:
-            sock_dict['photo_url'] = None
-        
-        sock_dict['data'] = json.dumps(sock_dict)
-        socks_list.append(sock_dict)
-    
-    stats = db.execute('''
-        SELECT 
-            COUNT(*) as total,
-            COALESCE(SUM(clean), 0) as clean,
-            COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
-            AVG(wear_count) as avg_wear_count
-        FROM socks
-    ''').fetchone()
+    with get_db().cursor() as db:
+        db.execute('''
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(clean), 0) as clean,
+                COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
+                AVG(wear_count) as avg_wear_count
+            FROM socks
+        ''')
+        stats = db.fetchone()
     
     current_time = datetime.now().strftime('%d.%m.%Y %H:%M')
     
@@ -115,7 +105,7 @@ def index():
 
 @app.route('/api/load', methods=['GET'])
 def load_socks():
-    query = '%' + request.args['query'] + '%'
+    query = '%' + request.args['query'].lower() + '%'
     offset = int(request.args['offset'])
     limit = int(request.args['limit'])
     
@@ -125,27 +115,29 @@ def load_socks():
         'dirty': 'clean ASC',
         'frequent': 'wear_count DESC'
     }[priority]
-    print(query)
 
-    db = get_db()
-    socks = db.execute(f'''
-        SELECT * FROM socks
-        WHERE color LIKE ? OR style LIKE ? OR brand LIKE ? OR ? == "%%"
-        ORDER BY {order}, created_at DESC
-        LIMIT ? OFFSET ?
-    ''', (query, query, query, query, limit, offset)).fetchall()
+    with get_db().cursor() as db:
+        db.execute(f'''
+            SELECT * FROM socks
+            WHERE LOWER(color) LIKE %s OR LOWER(style) LIKE %s OR LOWER(brand) LIKE %s OR %s LIKE ''
+            ORDER BY {order}, created_at DESC
+            LIMIT %s OFFSET %s
+        ''', (query, query, query, query, limit, offset))
+        socks = db.fetchall()
     
     socks_list = []
     for sock in socks:
         sock_dict = dict(sock)
-        if sock_dict['created_at']:
-            sock_dict['created_at_formatted'] = datetime.strptime(
-                sock_dict['created_at'], '%Y-%m-%d %H:%M:%S'
-            ).strftime('%d.%m.%Y')
-        if sock_dict['last_washed']:
-            sock_dict['last_washed_formatted'] = datetime.strptime(
-                sock_dict['last_washed'], '%Y-%m-%d %H:%M:%S'
-            ).strftime('%d.%m.%Y')
+
+        sock_dict['created_at'] = str(sock_dict['created_at'])
+        sock_dict['created_at_formatted'] = datetime.strptime(
+            str(sock_dict['created_at']), '%Y-%m-%d %H:%M:%S'
+        ).strftime('%d.%m.%Y')
+        
+        sock_dict['last_washed'] = str(sock_dict['last_washed'])
+        sock_dict['last_washed_formatted'] = datetime.strptime(
+            str(sock_dict['last_washed']), '%Y-%m-%d %H:%M:%S'
+        ).strftime('%d.%m.%Y')
         
         if sock_dict['photo_filename']:
             sock_dict['photo_url'] = url_for('static', filename=f'uploads/{sock_dict["photo_filename"]}')
@@ -160,56 +152,43 @@ def load_socks():
 
 @app.route('/add', methods=['POST'])
 def add_sock():
-    try:
-        color_name = request.form.get('color')
-        color_hex = request.form.get('color_hex')
-        style = request.form.get('style')
-        pattern = request.form.get('pattern')
-        material = request.form.get('material')
-        size = request.form.get('size')
-        brand = request.form.get('brand')
-        notes = request.form.get('notes')
-        
-        photo_filename = None
-        if 'photo' in request.files:
-            file = request.files['photo']
-            if file and file.filename != '' and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                unique_filename = f"{uuid.uuid4().hex[:8]}_{filename}"
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-                file.save(file_path)
-                photo_filename = unique_filename
-        
-        sock_id = str(uuid.uuid4())
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        db = get_db()
+    color_name = request.form.get('color')
+    color_hex = request.form.get('color_hex')
+    style = request.form.get('style')
+    pattern = request.form.get('pattern')
+    material = request.form.get('material')
+    size = request.form.get('size')
+    brand = request.form.get('brand')
+    
+    photo_filename = None
+    if 'photo' in request.files:
+        file = request.files['photo']
+        if file and file.filename != '' and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex[:8]}_{filename}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            file.save(file_path)
+            photo_filename = unique_filename
+    
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    with get_db().cursor() as db:
         db.execute('''
-            INSERT INTO socks (id, color, color_hex, style, pattern, material, 
-                              size, brand, photo_filename, clean, created_at, 
-                              last_washed, wear_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 0)
-        ''', (sock_id, color_name, color_hex, style, pattern, material, 
-              size, brand, photo_filename, current_time, current_time))
-        db.commit()
-        
-        # Возвращаем успех
-        return jsonify({
-            'success': True,
-            'message': 'Носок успешно добавлен!',
-            'sock_id': sock_id
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Ошибка при добавлении: {str(e)}'
-        }), 400
+            INSERT INTO socks (color, color_hex, style, pattern, material, 
+                            size, brand, photo_filename, clean, created_at, 
+                            last_washed, wear_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1, %s, %s, 0)
+        ''', (color_name, color_hex, style, pattern, material, 
+            size, brand, photo_filename, current_time, current_time))
+    
+    return jsonify({
+        'success': True,
+        'message': 'Носок успешно добавлен!'
+    })
+    
 
 @app.route('/add', methods=['GET'])
 def add_sock_page():
-    db = get_db()
-    
     color_options = [
         {'name': 'Черные', 'hex': '#2c3e50'},
         {'name': 'Белые', 'hex': '#ecf0f1'},
@@ -259,93 +238,85 @@ def add_sock_page():
 
 @app.route('/toggle_clean/<string:sock_id>', methods=['POST'])
 def toggle_clean(sock_id):
-    try:
-        db = get_db()
-        
-        sock = db.execute('SELECT clean, wear_count FROM socks WHERE id = ?', (sock_id,)).fetchone()
-        
-        if not sock:
-            return jsonify({'success': False, 'message': 'Носок не найден'}), 404
-        
-        new_clean_status = not sock['clean']
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
+    with get_db().cursor() as db:
+        db.execute('SELECT clean, wear_count FROM socks WHERE id = %s', (sock_id,))
+        sock = db.fetchone()
+    
+    if not sock:
+        return jsonify({'success': False, 'message': 'Носок не найден'}), 404
+    
+    new_clean_status = not sock['clean']
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    with get_db().cursor() as db:
         if new_clean_status:
             db.execute('''
                 UPDATE socks 
-                SET clean = 1, last_washed = ?, wear_count = wear_count + 1 
-                WHERE id = ?
+                SET clean = 1, last_washed = %s, wear_count = wear_count + 1 
+                WHERE id = %s
             ''', (current_time, sock_id))
             
-            db.execute('INSERT INTO wash_history (sock_id) VALUES (?)', (sock_id,))
+            db.execute('INSERT INTO wash_history (sock_id) VALUES (%s)', (sock_id,))
         else:
-            db.execute('UPDATE socks SET clean = 0 WHERE id = ?', (sock_id,))
-        
-        db.commit()
-        
-        return jsonify({
-            'success': True, 
-            'sock_id': sock_id,
-            'new_status': 'clean' if new_clean_status else 'dirty'
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
+            db.execute('UPDATE socks SET clean = 0 WHERE id = %s', (sock_id,))
+    
+    return jsonify({
+        'success': True, 
+        'new_status': 'clean' if new_clean_status else 'dirty'
+    })
 
 @app.route('/delete_sock/<string:sock_id>', methods=['DELETE'])
 def delete_sock(sock_id):
-    try:
-        db = get_db()
-        
-        sock = db.execute('SELECT photo_filename FROM socks WHERE id = ?', (sock_id,)).fetchone()
-        
-        if sock and sock['photo_filename']:
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], sock['photo_filename'])
-            if os.path.exists(photo_path):
-                os.remove(photo_path)
-        
-        db.execute('DELETE FROM socks WHERE id = ?', (sock_id,))
-        db.execute('DELETE FROM wash_history WHERE sock_id = ?', (sock_id,))
-        db.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Носок успешно удален'
-        })
-        
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
+    with get_db().cursor() as db:
+        db.execute('SELECT photo_filename FROM socks WHERE id = %s', (sock_id,))
+        sock = db.fetchone()
+    
+    if sock and sock['photo_filename']:
+        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], sock['photo_filename'])
+        if os.path.exists(photo_path):
+            os.remove(photo_path)
+    
+    with get_db().cursor() as db:
+        db.execute('DELETE FROM socks WHERE id = %s', (sock_id,))
+        db.execute('DELETE FROM wash_history WHERE sock_id = %s', (sock_id,))
+    
+    return jsonify({
+        'success': True,
+        'message': 'Носок успешно удален'
+    })
 
 @app.route('/api/stats')
 def get_stats():
-    db = get_db()
-    
-    stats = db.execute('''
-        SELECT 
-            COUNT(*) as total,
-            COALESCE(SUM(clean), 0) as clean,
-            COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
-            COUNT(DISTINCT color) as colors_count,
-            COUNT(DISTINCT style) as styles_count,
-            SUM(wear_count) as total_wears,
-            AVG(wear_count) as avg_wear_count
-        FROM socks
-    ''').fetchone()
-    
-    color_stats = db.execute('''
-        SELECT color, color_hex, COUNT(*) as count,
-               COALESCE(SUM(clean), 0) as clean_count
-        FROM socks
-        GROUP BY color, color_hex
-        ORDER BY count DESC
-    ''').fetchall()
-    
-    style_stats = db.execute('''
-        SELECT style, COUNT(*) as count
-        FROM socks
-        GROUP BY style
-        ORDER BY count DESC
-    ''').fetchall()
+    with get_db().cursor() as db:
+        db.execute('''
+            SELECT 
+                COUNT(*) as total,
+                COALESCE(SUM(clean), 0) as clean,
+                COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
+                COUNT(DISTINCT color) as colors_count,
+                COUNT(DISTINCT style) as styles_count,
+                SUM(wear_count) as total_wears,
+                AVG(wear_count) as avg_wear_count
+            FROM socks
+        ''')
+        stats = db.fetchone()
+        
+        db.execute('''
+            SELECT color, color_hex, COUNT(*) as count,
+                COALESCE(SUM(clean), 0) as clean_count
+            FROM socks
+            GROUP BY color, color_hex
+            ORDER BY count DESC
+        ''')
+        color_stats = db.fetchall()
+        
+        db.execute('''
+            SELECT style, COUNT(*) as count
+            FROM socks
+            GROUP BY style
+            ORDER BY count DESC
+        ''')
+        style_stats = db.fetchall()
     
     return jsonify({
         'success': True,
@@ -356,14 +327,14 @@ def get_stats():
 
 @app.route('/api/wash_history/<string:sock_id>')
 def get_wash_history(sock_id):
-    db = get_db()
-    
-    history = db.execute('''
-        SELECT wash_date 
-        FROM wash_history 
-        WHERE sock_id = ? 
-        ORDER BY wash_date DESC
-    ''', (sock_id,)).fetchall()
+    with get_db().cursor() as db:
+        db.execute('''
+            SELECT wash_date 
+            FROM wash_history 
+            WHERE sock_id = %s 
+            ORDER BY wash_date DESC
+        ''', (sock_id,))
+        history = db.fetchall()
     
     return jsonify({
         'success': True,
