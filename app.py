@@ -19,7 +19,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 def get_db():
-    db_url = os.environ.get('DATABASE_URL')
+    db_url = os.environ.get('MYSQL_URL')
     
     if db_url and db_url.startswith('mysql://'):
         from urllib.parse import urlparse
@@ -36,7 +36,7 @@ def get_db():
         )
     else:
         conn = pymysql.connect(
-            host='localhost',
+            host='127.0.0.1',
             user='user',
             password='123',
             database='sss',
