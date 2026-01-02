@@ -1,22 +1,29 @@
 {
-  "name": "socks-organizer",
-  "version": "1.0.0",
-  "description": "Органайзер для коллекции носков",
+  "name": "socks-security-system",
+  "proxy": "http://localhost:5000",
   "scripts": {
-    "build": "tsc",
-    "build:watch": "tsc --watch",
-    "dev": "concurrently \"npm run build:watch\" \"python app.py\"",
-    "clean": "rm -rf static/js/*.js static/js/*.js.map",
-    "build:clean": "npm run clean && npm run build"
-  },
-  "devDependencies": {
-    "concurrently": "^8.0.0",
-    "typescript": "^5.0.0"
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
   },
   "dependencies": {
-    "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/react-router": "^5.1.20",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "react-scripts": "^5.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }

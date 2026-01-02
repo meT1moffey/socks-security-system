@@ -1,8 +1,6 @@
-const API_BASE = '';
-
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
-        const response = await fetch(`${API_BASE}${endpoint}`, {
+        const response = await fetch(endpoint, {
             ...options,
             headers: {
                 'Accept': 'application/json',

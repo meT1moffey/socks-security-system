@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, g, send_from_directory
+from flask import Flask, jsonify, request, g
 from datetime import datetime
 import pymysql
 import os
@@ -123,25 +123,6 @@ def close_db(error):
     if hasattr(g, 'db'):
         g.db.close()
 
-@app.route('/')
-def index():
-    with get_db().cursor() as db:
-        db.execute('''
-            SELECT 
-                COUNT(*) as total,
-                COALESCE(SUM(clean), 0) as clean,
-                COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
-                AVG(wear_count) as avg_wear_count
-            FROM socks
-        ''')
-        stats = db.fetchone()
-    
-    current_time = datetime.now().strftime('%d.%m.%Y %H:%M')
-    
-    return render_template('index.html',
-                         stats=dict(stats),
-                         current_time=current_time)
-
 @app.route('/api/load', methods=['GET'])
 def load_socks():
     query = '%' + request.args['query'].lower() + '%'
@@ -199,7 +180,7 @@ def add_sock():
         file = request.files['photo']
         if file and file.filename != '' and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            photo_name = save_img(file)
+            photo_name = save_img(filename)
     
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
@@ -217,56 +198,6 @@ def add_sock():
         'message': 'Носок успешно добавлен!'
     })
     
-
-@app.route('/add', methods=['GET'])
-def add_sock_page():
-    color_options = [
-        {'name': 'Черные', 'hex': '#2c3e50'},
-        {'name': 'Белые', 'hex': '#ecf0f1'},
-        {'name': 'Серые', 'hex': '#7f8c8d'},
-        {'name': 'Синие', 'hex': '#3498db'},
-        {'name': 'Зеленые', 'hex': '#27ae60'},
-        {'name': 'Красные', 'hex': '#e74c3c'},
-        {'name': 'Желтые', 'hex': '#f1c40f'},
-        {'name': 'Фиолетовые', 'hex': '#9b59b6'},
-        {'name': 'Розовые', 'hex': '#e84393'},
-        {'name': 'Оранжевые', 'hex': '#e67e22'},
-        {'name': 'Голубые', 'hex': '#00cec9'},
-        {'name': 'Коричневые', 'hex': '#a1887f'},
-        {'name': 'Бежевые', 'hex': '#f5deb3'},
-        {'name': 'Бирюзовые', 'hex': '#1abc9c'},
-        {'name': 'Мятные', 'hex': '#98ff98'},
-    ]
-    
-    style_options = [
-        'Спортивные', 'Повседневные', 'Домашние', 
-        'Бизнес', 'Короткие', 'Термо', 'Вязаные',
-        'Смешные', 'Праздничные'
-    ]
-    
-    pattern_options = [
-        'Однотонные', 'Полоска', 'Горошек', 'Клетка',
-        'Геометрия', 'Принт', 'Логотип'
-    ]
-    
-    material_options = [
-        'Хлопок', 'Шерсть', 'Синтетика', 'Шелк', 'Бамбук', 'Лен',
-    ]
-    
-    size_options = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
-    
-    brand_options = [
-        'Nike', 'Puma', 'Reebok', 'Uniqlo', 'H&M', 'Wilson', 'Funny Socks', 'Unknown'
-    ]
-    
-    return render_template('add_sock.html',
-                         color_options=color_options,
-                         style_options=style_options,
-                         pattern_options=pattern_options,
-                         material_options=material_options,
-                         size_options=size_options,
-                         brand_options=brand_options)
-
 @app.route('/toggle_clean/<string:sock_id>', methods=['POST'])
 def toggle_clean(sock_id):
     with get_db().cursor() as db:
@@ -319,36 +250,14 @@ def get_stats():
                 COUNT(*) as total,
                 COALESCE(SUM(clean), 0) as clean,
                 COUNT(*) - COALESCE(SUM(clean), 0) as dirty,
-                COUNT(DISTINCT color) as colors_count,
-                COUNT(DISTINCT style) as styles_count,
-                SUM(wear_count) as total_wears,
                 AVG(wear_count) as avg_wear_count
             FROM socks
         ''')
         stats = db.fetchone()
-        
-        db.execute('''
-            SELECT color, color_hex, COUNT(*) as count,
-                COALESCE(SUM(clean), 0) as clean_count
-            FROM socks
-            GROUP BY color, color_hex
-            ORDER BY count DESC
-        ''')
-        color_stats = db.fetchall()
-        
-        db.execute('''
-            SELECT style, COUNT(*) as count
-            FROM socks
-            GROUP BY style
-            ORDER BY count DESC
-        ''')
-        style_stats = db.fetchall()
     
     return jsonify({
         'success': True,
         'stats': dict(stats),
-        'color_stats': [dict(row) for row in color_stats],
-        'style_stats': [dict(row) for row in style_stats]
     })
 
 @app.route('/api/wash_history/<string:sock_id>')
@@ -364,12 +273,8 @@ def get_wash_history(sock_id):
     
     return jsonify({
         'success': True,
-        'history': [dict(row) for row in history]
+        'history': [row['wash_date'] for row in history]
     })
-
-@app.route('/static/js/<path:filename>')
-def serve_js(filename):
-    return send_from_directory('static/js', filename.split('.js')[0] + '.js')
 
 if __name__ == '__main__':
     with app.app_context():
