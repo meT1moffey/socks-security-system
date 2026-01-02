@@ -15,10 +15,18 @@
     "react-scripts": "^5.0.1"
   },
   "devDependencies": {
-    "serve": "^14.2.0"
+    "serve": "^14.2.5"
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   }
 }
