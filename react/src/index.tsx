@@ -424,7 +424,7 @@ function Modal(args: any) {
 }
 
 function MainPage(args: any) {
-    console.log(process.env.API_URL)
+    console.log(process)
     return (
         <div>
             <div className="container">
