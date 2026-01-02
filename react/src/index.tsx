@@ -16,7 +16,7 @@ function Header() {
     }
 
     return (
-        <header className="header">
+        <header>
             <div className="header-top">
                 <div className="logo">
                     <i className="fas fa-socks"></i>
@@ -227,7 +227,7 @@ function WideSockRow(args: any) {
     const cleanState = useState<boolean>(sock.clean)
     useEffect(() => {cleanState[1](sock.clean)}, [sock.clean])
     return (
-        <tr className="sock-row">
+        <tr>
             <td className="photo-cell">
                 <div className="photo-container">
                     <SockPhoto photo_url={sock.photo_url} color={sock.color} color_hex={sock.color_hex}/>
@@ -380,7 +380,7 @@ function Content() {
     useEffect(() => { loadMoreSocks(true) }, [priorityState[0]])
 
     return (
-        <div className="main-content">
+        <main>
             <div className="table-header">
                 <h2><i className="fas fa-list"></i> Коллекция носков</h2>
                 <div>
@@ -392,7 +392,7 @@ function Content() {
 
             <SocksTable priority={priorityState[0]} socks={socks} unload={unload}/>
             <LoadMorebtn loadMoreSocks={() => loadMoreSocks()}/>
-        </div>
+        </main>
     )
 }
 
@@ -577,7 +577,7 @@ function AddSockPage(args: any) {
 
     return (
         <div className="container">
-            <header className="header">
+            <header>
                 <div className="logo">
                     <i className="fas fa-socks"></i>
                     <h1>Добавить носок</h1>

@@ -18,7 +18,7 @@ body {
     padding: 20px;
 }
 
-.header {
+header {
     text-align: center;
     margin-bottom: 30px;
     padding: 20px;
@@ -87,7 +87,7 @@ body {
     font-size: 0.9rem;
 }
 
-.main-content {
+main {
     background: white;
     border-radius: 15px;
     padding: 25px;
@@ -156,14 +156,14 @@ th {
     letter-spacing: 0.5px;
 }
 
+tr, .sock-row {
+    padding: 15px;
+    border-top: solid 2px #e9ecef;
+}
+
 td {
     padding: 15px;
     vertical-align: middle;
-}
-
-.sock-row {
-    padding: 15px;
-    border-top: solid 2px #e9ecef;
 }
 
 .main-sock-info {

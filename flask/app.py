@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, g
+from flask_cors import CORS
 from datetime import datetime
 import pymysql
 import os
@@ -6,6 +7,7 @@ from werkzeug.utils import secure_filename
 import boto3
 
 app = Flask(__name__)
+CORS(app)
 app.config['DATABASE'] = 'socks.db'
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 1 << 24
