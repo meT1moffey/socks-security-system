@@ -9,7 +9,7 @@ import boto3
 app = Flask(__name__)
 CORS(app)
 app.config['DATABASE'] = 'socks.db'
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 1 << 24
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'webp'}
 

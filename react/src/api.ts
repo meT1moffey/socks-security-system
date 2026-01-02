@@ -1,4 +1,4 @@
-const API_URL = process.env.API_URL || 'http://localhost:5000'
+const API_URL = process.env.API_URL ?? 'http://localhost:5000'
 
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
