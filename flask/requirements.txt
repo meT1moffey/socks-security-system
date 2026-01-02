@@ -1,5 +1,5 @@
 Flask==3.0.2
-FlaskCORS
+Flask-CORS==5.0.0
 PyMySQL==1.1.1
 cryptography==41.0.4
 boto3
