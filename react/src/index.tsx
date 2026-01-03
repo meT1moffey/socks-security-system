@@ -84,6 +84,7 @@ function PriorityBtn(args: any) {
             className={'priority-btn' + (args.priorityState[0] == args.priority ? ' active' : '')}
             onClick={() => args.priorityState[1](args.priority)}>
             {args.text}
+            <i className='fas fa-caret-up' style={{marginLeft: '10px'}}></i>
         </button>
     )
 }
@@ -113,6 +114,11 @@ function DetailItem(args: any) {
 }
 
 function CleanStatus(args: any) {
+    const [_, setLastUpdate] = useState<number>(Date.now())
+    useEffect(() => {
+        setLastUpdate(Date.now())
+    }, [args.clean])
+
     if(args.clean) {
         return (
             <div className="clean-status clean">
@@ -207,8 +213,9 @@ function DeleteBtn(args: any) {
     async function Delete() {
         await deleteSock(args.sock.id)
         args.unload(args.sock)
+        OpenModal(null)
     }
-    
+
     function ConfirmDelete() {
         const modal = {
             'title': "Подтверждение удаления",
