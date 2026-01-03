@@ -180,6 +180,7 @@ def add_sock():
     photo_name = None
     if 'photo' in request.files:
         file = request.files['photo']
+        print(file)
         if file and file.filename != '' and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             photo_name = save_img(filename)
