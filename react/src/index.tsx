@@ -292,6 +292,8 @@ function WideSockRow(args: any) {
 
 function ThinSockRow(args: any) {
     const sock = args.sock
+    const cleanState = useState<boolean>(sock.clean)
+    useEffect(() => {cleanState[1](sock.clean)}, [sock.clean])
     return (
         <div className="sock-row">
             <div className="photo-cell">
@@ -332,7 +334,7 @@ function ThinSockRow(args: any) {
             </div>
             <div className="actions-cell">
                 <div className="action-buttons">
-                    <ToggleClean sock={sock} unload={args.unload}/>
+                    <ToggleClean sockId={sock.id} cleanState={cleanState}/>
                     <DeleteBtn sock={sock} unload={args.unload}/>
                 </div>
             </div>
