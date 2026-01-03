@@ -424,7 +424,6 @@ function Modal(args: any) {
 }
 
 function MainPage(args: any) {
-    console.log(process)
     return (
         <div>
             <div className="container">

@@ -1,8 +1,8 @@
-const API_URL = process.env.API_URL ?? 'http://localhost:5000'
+const API_URL = process.env.REACT_APP_API_URL
 
 async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
-        const response = await fetch(API_URL + endpoint, {
+        const response = await fetch((API_URL ?? 'http://localhost:5000') + endpoint, {
             ...options,
             headers: {
                 'Accept': 'application/json',
