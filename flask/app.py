@@ -181,7 +181,7 @@ def add_sock():
     if 'photo' in request.files:
         file = request.files['photo']
         if file and file.filename != '' and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
+            file.filename = secure_filename(file.filename)
             photo_name = save_img(file)
     
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import './style.css'
 
-import { getStats, loadSocks, toggleCleanStatus, getWashHistory, addSock } from './api'
+import { getStats, loadSocks, toggleCleanStatus, getWashHistory, addSock, deleteSock } from './api'
 
 let performSearch = async (_: string) => {}
 function Header() {
@@ -56,8 +56,18 @@ function StatCard(args: any) {
 }
 
 function Stats() {
+    const [lastUpdate, setLastUpdate] = useState<number>(Date.now())
     const [stats, setStats] = useState<any>({})
-    useEffect(() => { getStats().then(data => setStats(data.stats)) }, [])
+    useEffect(() => { getStats().then(data => setStats(data.stats)) }, [lastUpdate])
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setLastUpdate(Date.now())
+        }, 5000)
+
+        return () => clearInterval(interval)
+    }, [])
+
     return (
         <div className='stats'>
             <StatCard iClass="fas fa-socks" stat={stats.total} text="Всего носков"/>
@@ -77,7 +87,7 @@ function PriorityBtn(args: any) {
         </button>
     )
 }
-const isWide = window.innerWidth > 835
+const isWide = window.innerWidth > 1080
 
 function SockPhoto(args: any) {
     if(args.photo_url) {
@@ -195,9 +205,10 @@ function ToggleClean(args: any) {
 
 function DeleteBtn(args: any) {
     async function Delete() {
-        console.log("deletion captured but not performed to keep database")
-        console.log(args.sockId)
+        await deleteSock(args.sock.id)
+        args.unload(args.sock)
     }
+    
     function ConfirmDelete() {
         const modal = {
             'title': "Подтверждение удаления",
@@ -265,7 +276,7 @@ function WideSockRow(args: any) {
             <td className="actions-cell">
                 <div className="action-buttons">
                     <ToggleClean sockId={sock.id} cleanState={cleanState}/>
-                    <DeleteBtn sockId={sock.id}/>
+                    <DeleteBtn sock={sock} unload={args.unload}/>
                 </div>
             </td>
         </tr>
@@ -315,9 +326,7 @@ function ThinSockRow(args: any) {
             <div className="actions-cell">
                 <div className="action-buttons">
                     <ToggleClean sock={sock} unload={args.unload}/>
-                    <button className="action-btn btn-delete">
-                        <i className="fas fa-trash"></i> Удалить
-                    </button>
+                    <DeleteBtn sock={sock} unload={args.unload}/>
                 </div>
             </div>
         </div>

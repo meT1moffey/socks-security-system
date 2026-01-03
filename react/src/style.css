@@ -130,7 +130,7 @@ main {
     color: white;
 }
 
-@media(width>835px) {
+@media(width>1080px) {
     .action-buttons {
         flex-direction: column;
     }
