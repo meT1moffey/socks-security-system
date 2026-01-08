@@ -92,8 +92,8 @@ function SockPhoto(args: any) {
             title: args.color + " носки",
             iClass: 'fas fa-socks',
             body: (
-                <div className="zoomed-photo-container">
-                    <img src={args.photo_url} alt={args.color + " носки"} className="zoomed-sock-photo" style={{maxWidth: '100%', maxHeight: '100%'}}></img>
+                <div className="zoomed-photo">
+                    <img src={args.photo_url} alt={args.color + " носки"}></img>
                 </div>
             )
         })
