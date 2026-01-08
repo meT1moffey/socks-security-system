@@ -254,6 +254,7 @@ td {
 .header-actions {
     margin-top: 15px;
     display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
@@ -822,10 +823,6 @@ td {
 .breadcrumb span {
     color: #7f8c8d;
     font-weight: 500;
-}
-
-.main-content {
-    margin-bottom: 30px;
 }
 
 .form-section {

@@ -48,7 +48,9 @@ def save_img(file):
         )
     else:
         local_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(local_path)
+        with open(local_path, 'wb') as f:
+            f.write(file.read())
+                  
     return filename
 
 def delete_img(photo_name):

@@ -26,6 +26,9 @@ function Header() {
                     <a href="/add" className="add-btn">
                         <i className="fas fa-plus"></i> Добавить носок
                     </a>
+                    <a href="/about" className="add-btn">
+                        <i className="fas fa-info-circle"></i> О системе
+                    </a>
                 </div>
             </div>
             
@@ -55,18 +58,11 @@ function StatCard(args: any) {
     )
 }
 
+let updateStats: () => void = () => {}
 function Stats() {
-    const [lastUpdate, setLastUpdate] = useState<number>(Date.now())
     const [stats, setStats] = useState<any>({})
-    useEffect(() => { getStats().then(data => setStats(data.stats)) }, [lastUpdate])
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setLastUpdate(Date.now())
-        }, 5000)
-
-        return () => clearInterval(interval)
-    }, [])
+    updateStats = () => { getStats().then(data => setStats(data.stats)) }
+    useEffect(() => { updateStats() }, [])
 
     return (
         <div className='stats'>
@@ -91,9 +87,21 @@ function PriorityBtn(args: any) {
 const isWide = window.innerWidth > 1080
 
 function SockPhoto(args: any) {
+    function ZoomPhoto() {
+        OpenModal({
+            title: args.color + " носки",
+            iClass: 'fas fa-socks',
+            body: (
+                <div className="zoomed-photo-container">
+                    <img src={args.photo_url} alt={args.color + " носки"} className="zoomed-sock-photo" style={{maxWidth: '100%', maxHeight: '100%'}}></img>
+                </div>
+            )
+        })
+    }
+
     if(args.photo_url) {
         return (
-            <img src={args.photo_url} alt={args.color + "носки"} className="sock-photo" loading="lazy"></img>
+            <img src={args.photo_url} alt={args.color + " носки"} className="sock-photo" loading="lazy" onClick={ZoomPhoto}></img>
         )
     }
     else {
@@ -114,11 +122,6 @@ function DetailItem(args: any) {
 }
 
 function CleanStatus(args: any) {
-    const [_, setLastUpdate] = useState<number>(Date.now())
-    useEffect(() => {
-        setLastUpdate(Date.now())
-    }, [args.clean])
-
     if(args.clean) {
         return (
             <div className="clean-status clean">
@@ -188,6 +191,7 @@ function ToggleClean(args: any) {
     const [clean, setClean] = args.cleanState
     async function toggle() {
         await toggleCleanStatus(args.sockId)
+        updateStats()
         setClean(!clean)
     }
 
@@ -214,6 +218,7 @@ function DeleteBtn(args: any) {
         await deleteSock(args.sock.id)
         args.unload(args.sock)
         OpenModal(null)
+        updateStats()
     }
 
     function ConfirmDelete() {
@@ -268,7 +273,7 @@ function WideSockRow(args: any) {
                 </div>
             </td>
             <td>
-                <CleanStatus clean={sock.clean}/>
+                <CleanStatus clean={cleanState[0]}/>
             </td>
             <td className="wear-cell">
                 <div className="wear-count">
@@ -305,7 +310,7 @@ function ThinSockRow(args: any) {
                 <div className="sock-info">
                     <div className="main-sock-info">
                         <h4>{sock.color} носки</h4>
-                        <CleanStatus clean={sock.clean}/>
+                        <CleanStatus clean={cleanState[0]}/>
                     </div>
                     <div className="sock-details">
                         <DetailItem iClass="fas fa-tshirt" value={sock.style}/>
@@ -594,44 +599,73 @@ function AddSockPage(args: any) {
     }
 
     return (
-        <div className="container">
-            <header>
-                <div className="logo">
-                    <i className="fas fa-socks"></i>
-                    <h1>Добавить носок</h1>
-                </div>
-                <p className="subtitle">Добавьте новый носок в вашу коллекцию</p>
-            </header>
-
-            <nav className="breadcrumb">
-                <a href="/"><i className="fas fa-home"></i> Главная</a>
-                <i className="fas fa-chevron-right"></i>
-                <span>Добавить носок</span>
-            </nav>
-
-            <main className="main-content">
-                <form id="addSockForm" className="sock-form" onSubmit={(e) => Submit(e)}>
-                    <div className="form-section">
-                        <ColorInput/>
-                        <ParamInput iClass="fas fa-socks" title="Стиль" hint="Выберите стиль" name="style" options={style_options}/>
-                        <ParamInput iClass="fas fa-shapes" title="Узор" hint="Выберите узор" name="pattern" options={pattern_options}/>
-                        <ParamInput iClass="fas fa-spa" title="Материал" hint="Выберите материал" name="material" options={material_options}/>
-                        <ParamInput iClass="fas fa-ruler" title="Размер" hint="Выберите размер" name="size" options={size_options}/>
-                        <ParamInput iClass="fas fa-tag" title="Бренд" hint="Выберите бренд" name="brand" options={brand_options}/>
-                        <ImageInput/>
+        <div>
+            <div className="container">
+                <header>
+                    <div className="logo">
+                        <i className="fas fa-socks"></i>
+                        <h1>Добавить носок</h1>
                     </div>
+                    <p className="subtitle">Добавьте новый носок в вашу коллекцию</p>
+                </header>
 
-                    <div className="form-actions">
-                        <button type="button" className="btn-secondary" onClick={() => window.location.href=''}>
-                            <i className="fas fa-times"></i> Отмена
-                        </button>
-                        <button type="submit" className="btn-primary">
-                            <i className="fas fa-plus"></i> Добавить носок
-                        </button>
+                <nav className="breadcrumb">
+                    <a href="/"><i className="fas fa-home"></i> Главная</a>
+                    <i className="fas fa-chevron-right"></i>
+                    <span>Добавить носок</span>
+                </nav>
+
+                <main>
+                    <form id="addSockForm" className="sock-form" onSubmit={(e) => Submit(e)}>
+                        <div className="form-section">
+                            <ColorInput/>
+                            <ParamInput iClass="fas fa-socks" title="Стиль" hint="Выберите стиль" name="style" options={style_options}/>
+                            <ParamInput iClass="fas fa-shapes" title="Узор" hint="Выберите узор" name="pattern" options={pattern_options}/>
+                            <ParamInput iClass="fas fa-spa" title="Материал" hint="Выберите материал" name="material" options={material_options}/>
+                            <ParamInput iClass="fas fa-ruler" title="Размер" hint="Выберите размер" name="size" options={size_options}/>
+                            <ParamInput iClass="fas fa-tag" title="Бренд" hint="Выберите бренд" name="brand" options={brand_options}/>
+                            <ImageInput/>
+                        </div>
+
+                        <div className="form-actions">
+                            <button type="button" className="btn-secondary" onClick={() => window.location.href=''}>
+                                <i className="fas fa-times"></i> Отмена
+                            </button>
+                            <button type="submit" className="btn-primary">
+                                <i className="fas fa-plus"></i> Добавить носок
+                            </button>
+                        </div>
+                    </form>
+                </main>
+                <Modal modal={args.modal}/>
+            </div>
+            <Footer/>
+        </div>
+    )
+}
+
+function About() {
+    return (
+        <div>
+            <div className="container">
+                <header>
+                    <div className="logo">
+                        <i className="fas fa-socks"></i>
+                        <h1>О системе</h1>
                     </div>
-                </form>
-            </main>
-            <Modal modal={args.modal}/>
+                    <p className="subtitle">Добавьте новый носок в вашу коллекцию</p>
+                </header>
+                <nav className="breadcrumb">
+                    <a href="/"><i className="fas fa-home"></i> Главная</a>
+                    <i className="fas fa-chevron-right"></i>
+                    <span>О системе</span>
+                </nav>
+                <main>
+                    <h2>О Socks Security System</h2>
+                    <p>Socks Security System - это приложение для управления вашей коллекцией носков. Оно помогает отслеживать состояние носков, их носкость и историю стирок.</p>
+                </main>
+            </div>
+            <Footer/>
         </div>
     )
 }
@@ -644,6 +678,8 @@ function App() {
     switch(window.location.href.split('/')[3]) {
     case 'add':
         return <AddSockPage modal={modalLink}/>
+    case 'about':
+        return <About/>
     default:
         return <MainPage modal={modalLink}/>
     }
