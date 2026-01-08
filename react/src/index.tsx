@@ -653,7 +653,6 @@ function About() {
                         <i className="fas fa-socks"></i>
                         <h1>О системе</h1>
                     </div>
-                    <p className="subtitle">Добавьте новый носок в вашу коллекцию</p>
                 </header>
                 <nav className="breadcrumb">
                     <a href="/"><i className="fas fa-home"></i> Главная</a>
